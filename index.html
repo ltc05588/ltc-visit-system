@@ -874,6 +874,7 @@ auth.onAuthStateChanged(async (fbUser)=>{
   document.getElementById('userBadgeName').textContent = CURRENT_USER.name;
   document.getElementById('userBadgeRole').textContent = ROLE_LABELS[CURRENT_USER.role] || CURRENT_USER.role;
   document.getElementById('usersTabBtn').style.display = CURRENT_USER.role === 'owner' ? '' : 'none';
+  document.getElementById('addCgBtn').style.display = CURRENT_USER.role === 'user' ? 'none' : '';
 
   if(!usersListenerBound){
     usersListenerBound = true;
@@ -1507,6 +1508,7 @@ async function saveVisitRecords(){
 function renderCgTable(){
   const tbody = document.querySelector('#cgTable tbody');
   const cgIds = Object.keys(STATE.cgs || {}).sort();
+  const canManage = !CURRENT_USER || CURRENT_USER.role !== 'user';
   if(cgIds.length === 0){
     tbody.innerHTML = `<tr><td colspan="7" class="empty-state">ยังไม่มีข้อมูล CG กด "+ เพิ่ม CG" เพื่อเริ่มต้น</td></tr>`;
     return;
@@ -1522,8 +1524,8 @@ function renderCgTable(){
       <td>${elderlyCount}</td>
       <td><span class="badge ${cg.status==='active'?'green':'gray'}">${cg.status==='active'?'ใช้งาน':'ปิดใช้งาน'}</span></td>
       <td>
-        <button class="btn btn-outline btn-sm" data-edit-cg="${id}">✏ แก้ไข</button>
-        <button class="btn btn-danger btn-sm" data-del-cg="${id}">🗑 ลบ</button>
+        ${canManage ? `<button class="btn btn-outline btn-sm" data-edit-cg="${id}">✏ แก้ไข</button>
+        <button class="btn btn-danger btn-sm" data-del-cg="${id}">🗑 ลบ</button>` : `<span class="badge gray">ดูได้เท่านั้น</span>`}
       </td>
     </tr>`;
   }).join('');
@@ -1537,7 +1539,16 @@ function bindCgTabEvents(){
   document.getElementById('cgSaveBtn').addEventListener('click', saveCg);
 }
 
+function isCgManageAllowed(){
+  if(CURRENT_USER && CURRENT_USER.role === 'user'){
+    showToast('สิทธิ์ User ไม่สามารถจัดการข้อมูล CG ได้ (ดูได้เท่านั้น)', 'error');
+    return false;
+  }
+  return true;
+}
+
 function openCgModal(cgId){
+  if(!isCgManageAllowed()) return;
   document.getElementById('cgEditId').value = cgId || '';
   document.getElementById('cgModalTitle').textContent = cgId ? 'แก้ไขข้อมูล CG' : 'เพิ่ม CG';
   if(cgId){
@@ -1556,6 +1567,7 @@ function openCgModal(cgId){
 }
 
 async function saveCg(){
+  if(!isCgManageAllowed()) return;
   const name = document.getElementById('cgName').value.trim();
   if(!name){ showToast('กรุณาระบุชื่อ CG','error'); return; }
   const editId = document.getElementById('cgEditId').value;
@@ -1579,6 +1591,7 @@ async function saveCg(){
 }
 
 async function deleteCg(cgId){
+  if(!isCgManageAllowed()) return;
   const hasElderly = Object.keys(STATE.elderly||{}).some(eid=>STATE.elderly[eid].cgCode===cgId);
   if(hasElderly){
     showToast('ไม่สามารถลบได้ เนื่องจากยังมีผู้สูงอายุในความดูแลของ CG นี้','error');
