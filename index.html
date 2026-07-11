@@ -11,6 +11,7 @@
 <!-- Firebase compat SDK v9.23.0 -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <!-- PDF generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -287,6 +288,43 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 .pdfpage .pt-cell .d{font-size:12px;color:#333;margin-top:4px;}
 .pdfpage .pt-footer{position:absolute;bottom:20px;left:30px;right:30px;text-align:center;font-size:11px;color:#555;border-top:1px solid #ddd;padding-top:8px;}
 
+/* ===================== AUTH SCREEN ===================== */
+.auth-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.auth-overlay.hide{display:none;}
+.auth-box{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-lg);
+  padding:26px 24px;width:100%;max-width:380px;
+}
+.auth-box h1{font-size:1.05rem;margin:0 0 4px;color:var(--primary-dark);text-align:center;}
+.auth-box .sub{font-size:0.8rem;color:var(--muted);text-align:center;margin:0 0 18px;}
+.auth-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--bg);border-radius:999px;padding:4px;}
+.auth-tab-btn{
+  flex:1;border:none;background:transparent;padding:8px;border-radius:999px;
+  font-family:inherit;font-size:0.85rem;font-weight:600;color:var(--muted);cursor:pointer;
+}
+.auth-tab-btn.active{background:var(--primary);color:#fff;}
+.auth-panel{display:none;}
+.auth-panel.active{display:block;}
+.auth-error{font-size:0.8rem;color:var(--danger);margin:6px 0 0;min-height:1em;}
+.auth-box .btn{width:100%;justify-content:center;margin-top:10px;}
+
+.user-badge{
+  display:flex;align-items:center;gap:8px;justify-content:space-between;
+  margin-top:10px;font-size:0.78rem;
+}
+.user-badge .who{opacity:0.9;}
+.role-tag{
+  display:inline-block;padding:1px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;
+  background:rgba(255,255,255,0.25);
+}
+.logout-link{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:5px 10px;border-radius:999px;font-family:inherit;font-size:0.72rem;font-weight:600;cursor:pointer;}
+
+.pending-badge{background:var(--danger-light);color:var(--danger);}
+
 @media (max-width:640px){
   .app-header h1{font-size:0.92rem;}
   .card{padding:13px;}
@@ -295,15 +333,52 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 </head>
 <body>
 
+<!-- AUTH OVERLAY (Login / Register) -->
+<div class="auth-overlay hide" id="authOverlay">
+  <div class="auth-box" style="position:relative;">
+    <button type="button" id="authCloseBtn" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.1rem;color:var(--muted);cursor:pointer;">✕</button>
+    <h1>🏡 ระบบบันทึกการเยี่ยมผู้สูงอายุ</h1>
+    <p class="sub">รพ.สต.บ้านนายอ หมู่ที่ 4 ต.สร้างค้อ อ.ภูพาน จ.สกลนคร</p>
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" data-auth-tab="login">เข้าสู่ระบบ</button>
+      <button class="auth-tab-btn" data-auth-tab="register">สมัครสมาชิก</button>
+    </div>
+
+    <div class="auth-panel active" id="authPanel-login">
+      <div class="field"><label>อีเมล</label><input type="text" id="loginEmail" autocomplete="username"></div>
+      <div class="field"><label>รหัสผ่าน</label><input type="password" id="loginPassword" autocomplete="current-password"></div>
+      <p class="auth-error" id="loginError"></p>
+      <button class="btn btn-primary" id="loginBtn" type="button">เข้าสู่ระบบ</button>
+    </div>
+
+    <div class="auth-panel" id="authPanel-register">
+      <div class="field"><label>ชื่อ-สกุล</label><input type="text" id="regName"></div>
+      <div class="field"><label>อีเมล</label><input type="text" id="regEmail" autocomplete="username"></div>
+      <div class="field"><label>รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label><input type="password" id="regPassword" autocomplete="new-password"></div>
+      <p class="auth-error" id="registerError"></p>
+      <button class="btn btn-primary" id="registerBtn" type="button">สมัครสมาชิก</button>
+    </div>
+  </div>
+</div>
+
 <div class="app-header">
   <h1>🏡 ระบบบันทึกการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</h1>
   <p>รพ.สต.บ้านนายอ หมู่ที่ 4 ต.สร้างค้อ อ.ภูพาน จ.สกลนคร</p>
+  <div class="user-badge" id="guestBadge">
+    <span class="who">👁️ กำลังดูในฐานะบุคคลทั่วไป</span>
+    <button class="logout-link" id="guestLoginBtn">เข้าสู่ระบบ</button>
+  </div>
+  <div class="user-badge" id="userBadge" style="display:none;">
+    <span class="who">👤 <span id="userBadgeName"></span> <span class="role-tag" id="userBadgeRole"></span></span>
+    <button class="logout-link" id="logoutBtn">ออกจากระบบ</button>
+  </div>
   <div class="tabbar" id="tabbar">
     <button class="tab-btn active" data-tab="dashboard">📊 ภาพรวม</button>
-    <button class="tab-btn" data-tab="record">📷 บันทึกการเยี่ยม</button>
-    <button class="tab-btn" data-tab="cg">👥 จัดการ CG</button>
-    <button class="tab-btn" data-tab="elderly">👴 จัดการผู้สูงอายุ</button>
-    <button class="tab-btn" data-tab="pdf">📄 สร้าง PDF</button>
+    <button class="tab-btn" data-tab="record" data-auth="1">📷 บันทึกการเยี่ยม</button>
+    <button class="tab-btn" data-tab="cg" data-auth="1">👥 จัดการ CG</button>
+    <button class="tab-btn" data-tab="elderly" data-auth="1">👴 จัดการผู้สูงอายุ</button>
+    <button class="tab-btn" data-tab="pdf" data-auth="1">📄 สร้าง PDF</button>
+    <button class="tab-btn" data-tab="users" id="usersTabBtn" data-auth="1" style="display:none;">🔐 จัดการผู้ใช้</button>
   </div>
 </div>
 
@@ -467,6 +542,21 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
   </div>
 
+  <!-- TAB 6: USER MANAGEMENT (Owner only) -->
+  <div class="tab-panel" id="tab-users">
+    <div class="card">
+      <h2>🔐 จัดการบัญชีผู้ใช้และสิทธิ์</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-top:-4px;">
+        ผู้ที่สมัครสมาชิกใหม่จะได้สิทธิ์ "User" โดยอัตโนมัติ เจ้าของระบบ (Owner) สามารถเลื่อนสิทธิ์เป็น Admin หรือปรับลดสิทธิ์ได้ที่นี่
+      </p>
+      <div class="table-wrap">
+        <table id="usersTable"><thead><tr>
+          <th>ชื่อ</th><th>อีเมล</th><th>สิทธิ์</th><th>สมัครเมื่อ</th><th></th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Generic Confirm Modal -->
@@ -588,15 +678,19 @@ const IMGBB_API_KEY = "1ded683dd60e67f8ee962e3549f2a1fb";
 
 firebase.initializeApp(FIREBASE_CONFIG);
 const db = firebase.database();
+const auth = firebase.auth();
 const cgsRef = db.ref('cgs');
 const elderlyRef = db.ref('elderly');
 const visitsRef = db.ref('visits');
+const usersRef = db.ref('users');
 
 /* =========================================================
    STATE
 ========================================================= */
-const STATE = { cgs:{}, elderly:{}, visits:{} };
+const STATE = { cgs:{}, elderly:{}, visits:{}, users:{} };
 const DRILL = { level:1, cg:null, elderly:null };
+let CURRENT_USER = null; // { uid, name, email, role }
+const ROLE_LABELS = { owner:'Owner', admin:'Admin', user:'User' };
 
 const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 const THAI_MONTHS_ABBR = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
@@ -648,6 +742,10 @@ function showConfirm(message, title){
 document.getElementById('tabbar').addEventListener('click', (e)=>{
   const btn = e.target.closest('.tab-btn');
   if(!btn) return;
+  if(btn.dataset.auth === '1' && !CURRENT_USER){
+    openAuthOverlay();
+    return;
+  }
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   const tab = btn.dataset.tab;
@@ -656,7 +754,187 @@ document.getElementById('tabbar').addEventListener('click', (e)=>{
   if(tab === 'dashboard') renderDashboard();
   if(tab === 'cg') renderCgTable();
   if(tab === 'elderly') renderElderlyTable();
+  if(tab === 'users') renderUsersTable();
 });
+
+function goToDashboardTab(){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.tab-btn[data-tab="dashboard"]').classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-dashboard').classList.add('active');
+  renderDashboard();
+}
+
+/* =========================================================
+   AUTHENTICATION (Login / Register / Logout / Roles)
+========================================================= */
+document.querySelectorAll('.auth-tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.auth-tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.auth-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('authPanel-'+btn.dataset.authTab).classList.add('active');
+  });
+});
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('registerBtn').addEventListener('click', doRegister);
+document.getElementById('logoutBtn').addEventListener('click', ()=> auth.signOut());
+document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('regPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') doRegister(); });
+document.getElementById('guestLoginBtn').addEventListener('click', openAuthOverlay);
+document.getElementById('authCloseBtn').addEventListener('click', closeAuthOverlay);
+
+function openAuthOverlay(){
+  document.getElementById('authOverlay').classList.remove('hide');
+}
+function closeAuthOverlay(){
+  document.getElementById('authOverlay').classList.add('hide');
+  if(!CURRENT_USER) goToDashboardTab();
+}
+
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  if(!email || !password){ errEl.textContent = 'กรุณากรอกอีเมลและรหัสผ่าน'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  try{
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch(err){
+    errEl.textContent = authErrorMessage(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function doRegister(){
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const errEl = document.getElementById('registerError');
+  errEl.textContent = '';
+  if(!name || !email || !password){ errEl.textContent = 'กรุณากรอกข้อมูลให้ครบ'; return; }
+  if(password.length < 6){ errEl.textContent = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; return; }
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true;
+  try{
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await usersRef.child(cred.user.uid).set({
+      name, email, role:'user', createdAt: Date.now()
+    });
+  } catch(err){
+    errEl.textContent = authErrorMessage(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function authErrorMessage(err){
+  const map = {
+    'auth/invalid-email':'รูปแบบอีเมลไม่ถูกต้อง',
+    'auth/user-not-found':'ไม่พบบัญชีผู้ใช้นี้',
+    'auth/wrong-password':'รหัสผ่านไม่ถูกต้อง',
+    'auth/invalid-credential':'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+    'auth/email-already-in-use':'อีเมลนี้ถูกใช้สมัครแล้ว',
+    'auth/weak-password':'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'
+  };
+  return map[err.code] || ('เกิดข้อผิดพลาด: ' + err.message);
+}
+
+let usersListenerBound = false;
+auth.onAuthStateChanged(async (fbUser)=>{
+  if(!fbUser){
+    CURRENT_USER = null;
+    document.getElementById('authOverlay').classList.add('hide');
+    document.getElementById('guestBadge').style.display = 'flex';
+    document.getElementById('userBadge').style.display = 'none';
+    document.getElementById('usersTabBtn').style.display = 'none';
+    goToDashboardTab();
+    return;
+  }
+  // fetch / create profile
+  let snap = await usersRef.child(fbUser.uid).once('value');
+  if(!snap.exists()){
+    // fallback profile (e.g. account created before this system existed)
+    await usersRef.child(fbUser.uid).set({
+      name: fbUser.email, email: fbUser.email, role:'user', createdAt: Date.now()
+    });
+    snap = await usersRef.child(fbUser.uid).once('value');
+  }
+  const profile = snap.val();
+  CURRENT_USER = { uid: fbUser.uid, email: fbUser.email, name: profile.name || fbUser.email, role: profile.role || 'user' };
+
+  document.getElementById('authOverlay').classList.add('hide');
+  document.getElementById('guestBadge').style.display = 'none';
+  const badge = document.getElementById('userBadge');
+  badge.style.display = 'flex';
+  document.getElementById('userBadgeName').textContent = CURRENT_USER.name;
+  document.getElementById('userBadgeRole').textContent = ROLE_LABELS[CURRENT_USER.role] || CURRENT_USER.role;
+  document.getElementById('usersTabBtn').style.display = CURRENT_USER.role === 'owner' ? '' : 'none';
+
+  if(!usersListenerBound){
+    usersListenerBound = true;
+    usersRef.on('value', s=>{
+      STATE.users = s.val() || {};
+      const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+      if(activeTab === 'users') renderUsersTable();
+    });
+  }
+});
+
+function bindUsersTabEvents(){
+  const tbody = document.querySelector('#usersTable tbody');
+  tbody.addEventListener('change', async (e)=>{
+    const sel = e.target.closest('[data-role-select]');
+    if(!sel) return;
+    const uid = sel.dataset.roleSelect;
+    if(uid === CURRENT_USER.uid && sel.value !== 'owner'){
+      const ok = await showConfirm('คุณกำลังจะลดสิทธิ์ของตัวเอง หลังจากนี้คุณอาจเข้าเมนูจัดการผู้ใช้ไม่ได้อีก ยืนยันหรือไม่?', 'ยืนยันการเปลี่ยนสิทธิ์');
+      if(!ok){ renderUsersTable(); return; }
+    }
+    await usersRef.child(uid).update({ role: sel.value });
+    showToast('เปลี่ยนสิทธิ์ผู้ใช้เรียบร้อย','success');
+  });
+  tbody.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-del-user]');
+    if(!btn) return;
+    const uid = btn.dataset.delUser;
+    if(uid === CURRENT_USER.uid){ showToast('ไม่สามารถลบบัญชีของตัวเองได้','error'); return; }
+    const ok = await showConfirm('ต้องการลบบัญชีผู้ใช้นี้ใช่หรือไม่? (ลบได้เฉพาะข้อมูลสิทธิ์ ไม่ได้ลบบัญชี Auth โดยตรง กรุณาลบบัญชีที่หน้า Firebase Console ด้วย)', 'ยืนยันการลบ');
+    if(!ok) return;
+    await usersRef.child(uid).remove();
+    showToast('ลบข้อมูลผู้ใช้เรียบร้อย','success');
+  });
+}
+
+function renderUsersTable(){
+  const tbody = document.querySelector('#usersTable tbody');
+  const ids = Object.keys(STATE.users || {}).sort((a,b)=>(STATE.users[a].createdAt||0)-(STATE.users[b].createdAt||0));
+  if(ids.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">ยังไม่มีผู้ใช้ในระบบ</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ids.map(uid=>{
+    const u = STATE.users[uid];
+    const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString('th-TH') : '-';
+    return `<tr>
+      <td>${escapeHtml(u.name)}</td>
+      <td>${escapeHtml(u.email)}</td>
+      <td>
+        <select data-role-select="${uid}" style="width:auto;padding:5px 8px;">
+          <option value="user" ${u.role==='user'?'selected':''}>User</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+          <option value="owner" ${u.role==='owner'?'selected':''}>Owner</option>
+        </select>
+      </td>
+      <td>${created}</td>
+      <td><button class="btn btn-danger btn-sm" data-del-user="${uid}">ลบ</button></td>
+    </tr>`;
+  }).join('');
+}
 
 /* =========================================================
    ID GENERATORS
@@ -844,6 +1122,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   bindCgTabEvents();
   bindElderlyTabEvents();
   bindPdfTabEvents();
+  bindUsersTabEvents();
   document.getElementById('dashRefreshBtn').addEventListener('click', renderDashboard);
   document.getElementById('dashMonth').addEventListener('change', renderDashboard);
   document.getElementById('dashYear').addEventListener('change', renderDashboard);
