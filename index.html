@@ -612,7 +612,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div class="row">
       <div class="field"><label>บ้านเลขที่</label><input type="text" id="elderlyHouseNo"></div>
       <div class="field"><label>หมู่ที่</label>
-        <select id="elderlyMoo"><option value="13">13</option><option value="15">15</option></select>
+        <select id="elderlyMoo"><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="5">5</option><option value="12">12</option><option value="18">18</option><option value="20">20</option></select>
       </div>
     </div>
     <div class="field"><label>CG ผู้ดูแล *</label><select id="elderlyCgCode"></select></div>
@@ -1034,8 +1034,8 @@ function seedIfEmpty(){
     if(snap.exists()) return;
     const now = Date.now();
     const cgs = {
-      CG001:{name:'นางสาววินิจ หัสดง', phone:'', houseNo:'', moo:'13', status:'active', createdAt:now},
-      CG002:{name:'นางสาวศุภานัน มุ่งมาตร', phone:'', houseNo:'', moo:'13', status:'active', createdAt:now}
+      CG001:{name:'นางสาววินิจ หัสดง', phone:'', houseNo:'', moo:'1', status:'active', createdAt:now},
+      CG002:{name:'นางสาวศุภานัน มุ่งมาตร', phone:'', houseNo:'', moo:'1', status:'active', createdAt:now}
     };
     cgsRef.set(cgs).then(()=>{
       const cg1 = [
@@ -1057,7 +1057,7 @@ function seedIfEmpty(){
       function addBatch(list, cgCode, pdfMode){
         list.forEach(([name,age,gender])=>{
           const id = 'E' + String(n++).padStart(3,'0');
-          elderly[id] = { name, hn:'', age, gender, houseNo:'', moo: cgCode==='CG001'?'13':'13', adlGroup:2, cgCode, pdfMode, status:'active', createdAt: now };
+          elderly[id] = { name, hn:'', age, gender, houseNo:'', moo: cgCode==='CG001'?'1':'1', adlGroup:2, cgCode, pdfMode, status:'active', createdAt: now };
         });
       }
       addBatch(cg1,'CG001','normal');
@@ -1556,12 +1556,12 @@ function openCgModal(cgId){
     document.getElementById('cgName').value = cg.name || '';
     document.getElementById('cgPhone').value = cg.phone || '';
     document.getElementById('cgHouseNo').value = cg.houseNo || '';
-    document.getElementById('cgMoo').value = cg.moo || '13';
+    document.getElementById('cgMoo').value = cg.moo || '1';
   } else {
     document.getElementById('cgName').value = '';
     document.getElementById('cgPhone').value = '';
     document.getElementById('cgHouseNo').value = '';
-    document.getElementById('cgMoo').value = '13';
+    document.getElementById('cgMoo').value = '1';
   }
   document.getElementById('cgModal').classList.add('show');
 }
@@ -1660,7 +1660,7 @@ function openElderlyModal(eid){
     document.getElementById('elderlyGender').value = e.gender || 'ชาย';
     document.getElementById('elderlyAdl').value = e.adlGroup || '1';
     document.getElementById('elderlyHouseNo').value = e.houseNo || '';
-    document.getElementById('elderlyMoo').value = e.moo || '13';
+    document.getElementById('elderlyMoo').value = e.moo || '1';
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
     document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
   } else {
@@ -1670,7 +1670,7 @@ function openElderlyModal(eid){
     document.getElementById('elderlyGender').value = 'ชาย';
     document.getElementById('elderlyAdl').value = '1';
     document.getElementById('elderlyHouseNo').value = '';
-    document.getElementById('elderlyMoo').value = '13';
+    document.getElementById('elderlyMoo').value = '1';
     document.getElementById('elderlyPdfMode').value = 'normal';
   }
   document.getElementById('elderlyModal').classList.add('show');
