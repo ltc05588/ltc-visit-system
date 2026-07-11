@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>ระบบบันทึกการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง | รพ.สต.บ้านนายอ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase compat SDK v9.23.0 -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<!-- PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+:root{
+  --primary:#1D9E75;
+  --primary-dark:#167a5a;
+  --primary-light:#e6f5ef;
+  --secondary:#185FA5;
+  --secondary-light:#e8f1fa;
+  --danger:#D85A30;
+  --danger-light:#fbeae3;
+  --bg:#F2F5F4;
+  --card:#ffffff;
+  --text:#1f2a24;
+  --muted:#6b7c76;
+  --border:#e3e9e7;
+  --radius:12px;
+  --shadow:0 2px 12px rgba(20,40,35,0.08);
+  --shadow-lg:0 8px 30px rgba(20,40,35,0.18);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Sarabun',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:40px;
+}
+a{color:var(--secondary);}
+.app-header{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;
+  padding:18px 20px 14px;
+  box-shadow:var(--shadow);
+  position:sticky;
+  top:0;
+  z-index:50;
+}
+.app-header h1{
+  margin:0;
+  font-size:1.05rem;
+  font-weight:700;
+  line-height:1.4;
+}
+.app-header p{
+  margin:2px 0 0;
+  font-size:0.8rem;
+  opacity:0.9;
+  font-weight:400;
+}
+.tabbar{
+  display:flex;
+  overflow-x:auto;
+  gap:6px;
+  margin-top:14px;
+  -ms-overflow-style:none;
+  scrollbar-width:none;
+}
+.tabbar::-webkit-scrollbar{display:none;}
+.tab-btn{
+  flex:0 0 auto;
+  background:rgba(255,255,255,0.15);
+  border:none;
+  color:#fff;
+  padding:9px 14px;
+  border-radius:999px;
+  font-family:inherit;
+  font-size:0.85rem;
+  font-weight:600;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:background 0.15s;
+}
+.tab-btn.active{
+  background:#fff;
+  color:var(--primary-dark);
+}
+.container{
+  max-width:1100px;
+  margin:0 auto;
+  padding:16px;
+}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+  margin-bottom:16px;
+}
+.card h2{
+  margin:0 0 12px;
+  font-size:1rem;
+  font-weight:700;
+  color:var(--primary-dark);
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.card h3{
+  margin:0 0 8px;
+  font-size:0.9rem;
+  font-weight:600;
+  color:var(--text);
+}
+.grid-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:14px;
+}
+.stat-box{
+  background:var(--primary-light);
+  border-radius:10px;
+  padding:12px 14px;
+  text-align:center;
+}
+.stat-box .num{font-size:1.6rem;font-weight:700;color:var(--primary-dark);}
+.stat-box .lbl{font-size:0.75rem;color:var(--muted);margin-top:2px;}
+.stat-box.blue{background:var(--secondary-light);}
+.stat-box.blue .num{color:var(--secondary);}
+.stat-box.orange{background:var(--danger-light);}
+.stat-box.orange .num{color:var(--danger);}
+
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+label{font-size:0.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;}
+select,input[type=text],input[type=number],input[type=tel],textarea{
+  font-family:inherit;
+  font-size:0.9rem;
+  padding:9px 11px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#fff;
+  color:var(--text);
+  width:100%;
+}
+textarea{resize:vertical;min-height:60px;}
+.field{margin-bottom:12px;flex:1 1 160px;}
+.btn{
+  font-family:inherit;
+  border:none;
+  border-radius:8px;
+  padding:10px 16px;
+  font-size:0.85rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:transform 0.1s, opacity 0.15s;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-secondary{background:var(--secondary);color:#fff;}
+.btn-outline{background:#fff;color:var(--primary);border:1px solid var(--primary);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-sm{padding:5px 10px;font-size:0.75rem;border-radius:6px;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+th{color:var(--muted);font-weight:600;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.02em;}
+tr:hover td{background:#fafcfb;}
+.table-wrap{overflow-x:auto;}
+.badge{
+  display:inline-block;
+  padding:2px 9px;
+  border-radius:999px;
+  font-size:0.72rem;
+  font-weight:600;
+}
+.badge.green{background:var(--primary-light);color:var(--primary-dark);}
+.badge.blue{background:var(--secondary-light);color:var(--secondary);}
+.badge.gray{background:#eef1f0;color:var(--muted);}
+
+.progress-outer{background:#eef1f0;border-radius:999px;height:10px;overflow:hidden;width:100%;}
+.progress-inner{background:var(--primary);height:100%;transition:width 0.3s;}
+
+.breadcrumb{display:flex;gap:6px;align-items:center;font-size:0.82rem;margin-bottom:10px;flex-wrap:wrap;}
+.breadcrumb span{color:var(--muted);cursor:pointer;}
+.breadcrumb span.current{color:var(--text);font-weight:600;cursor:default;}
+.breadcrumb .sep{color:var(--border);}
+
+.drill-list{display:flex;flex-direction:column;gap:8px;}
+.drill-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;background:#fafcfb;border:1px solid var(--border);border-radius:10px;
+  cursor:pointer;
+}
+.drill-item:hover{border-color:var(--primary);}
+.drill-item .meta{color:var(--muted);font-size:0.8rem;}
+
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+.photo-card{background:#fafcfb;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.photo-card img{width:100%;height:120px;object-fit:cover;display:block;background:#eee;}
+.photo-card .info{padding:8px;font-size:0.75rem;color:var(--muted);}
+.photo-card .actions{display:flex;gap:6px;padding:0 8px 8px;}
+
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--primary-light);color:var(--primary-dark);
+  padding:4px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;
+}
+.chip .rm{cursor:pointer;color:var(--danger);font-weight:700;}
+.chips-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(15,30,25,0.55);
+  display:none;align-items:center;justify-content:center;z-index:200;padding:16px;
+}
+.modal-overlay.show{display:flex;}
+.modal-box{
+  background:#fff;border-radius:14px;max-width:480px;width:100%;
+  max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);
+  padding:20px;
+}
+.modal-box h3{margin:0 0 14px;font-size:1.05rem;color:var(--primary-dark);}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:10px 0;}
+.calendar-grid .dow{text-align:center;font-size:0.7rem;color:var(--muted);font-weight:700;}
+.calendar-grid .day{
+  text-align:center;padding:8px 0;border-radius:8px;background:#fafcfb;border:1px solid var(--border);
+  cursor:pointer;font-size:0.82rem;
+}
+.calendar-grid .day.blank{visibility:hidden;}
+.calendar-grid .day.sel{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700;}
+
+.toast-wrap{position:fixed;bottom:20px;right:20px;left:20px;display:flex;flex-direction:column;gap:8px;align-items:flex-end;z-index:300;pointer-events:none;}
+.toast{
+  background:#233;
+  color:#fff;padding:11px 16px;border-radius:10px;font-size:0.85rem;
+  box-shadow:var(--shadow-lg);max-width:340px;
+  animation:toastin 0.2s ease-out;
+}
+.toast.success{background:var(--primary-dark);}
+.toast.error{background:var(--danger);}
+.toast.info{background:var(--secondary);}
+@keyframes toastin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+.empty-state{text-align:center;padding:30px 10px;color:var(--muted);font-size:0.85rem;}
+.upload-progress-text{font-size:0.82rem;color:var(--secondary);font-weight:600;margin-top:8px;}
+.info-card{background:var(--secondary-light);border-radius:10px;padding:10px 14px;font-size:0.85rem;color:var(--secondary);margin-bottom:12px;}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.thumbs img{width:66px;height:66px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
+.section-actions{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:6px;}
+.filter-bar .field{margin-bottom:0;flex:0 0 auto;min-width:120px;}
+hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
+.spinner{
+  width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;
+  border-radius:50%;display:inline-block;animation:spin 0.7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* hidden PDF render area */
+#pdfRender{
+  position:fixed;left:-99999px;top:0;
+  width:700px;background:#fff;
+}
+.pdfpage{width:700px;min-height:990px;background:#fff;padding:34px 30px;font-family:'Sarabun',sans-serif;position:relative;box-sizing:border-box;}
+.pdfpage .pt-title{font-size:19px;font-weight:700;text-align:center;color:#111;}
+.pdfpage .pt-sub{font-size:15px;text-align:center;color:#111;margin-top:2px;}
+.pdfpage .pt-name{font-size:16px;font-weight:700;text-align:center;color:#111;margin-top:8px;}
+.pdfpage .pt-grid{display:grid;gap:14px;margin-top:18px;}
+.pdfpage .pt-cell{text-align:center;}
+.pdfpage .pt-cell img{width:100%;object-fit:cover;border-radius:4px;border:1px solid #ddd;}
+.pdfpage .pt-cell .d{font-size:12px;color:#333;margin-top:4px;}
+.pdfpage .pt-footer{position:absolute;bottom:20px;left:30px;right:30px;text-align:center;font-size:11px;color:#555;border-top:1px solid #ddd;padding-top:8px;}
+
+@media (max-width:640px){
+  .app-header h1{font-size:0.92rem;}
+  .card{padding:13px;}
+}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>🏡 ระบบบันทึกการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</h1>
+  <p>รพ.สต.บ้านนายอ หมู่ที่ 4 ต.สร้างค้อ อ.ภูพาน จ.สกลนคร</p>
+  <div class="tabbar" id="tabbar">
+    <button class="tab-btn active" data-tab="dashboard">📊 ภาพรวม</button>
+    <button class="tab-btn" data-tab="record">📷 บันทึกการเยี่ยม</button>
+    <button class="tab-btn" data-tab="cg">👥 จัดการ CG</button>
+    <button class="tab-btn" data-tab="elderly">👴 จัดการผู้สูงอายุ</button>
+    <button class="tab-btn" data-tab="pdf">📄 สร้าง PDF</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- TAB 1: DASHBOARD -->
+  <div class="tab-panel active" id="tab-dashboard">
+    <div class="card">
+      <div class="filter-bar">
+        <div class="field">
+          <label>เดือน</label>
+          <select id="dashMonth"></select>
+        </div>
+        <div class="field">
+          <label>ปี (พ.ศ.)</label>
+          <select id="dashYear"></select>
+        </div>
+        <button class="btn btn-outline" id="dashRefreshBtn">🔄 รีเฟรช</button>
+      </div>
+    </div>
+
+    <div class="grid-cards" style="margin-bottom:16px;">
+      <div class="card" style="margin-bottom:0;">
+        <h2>📅 สถิติรายเดือน</h2>
+        <div class="grid-cards" id="monthlyStatsBox"></div>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <h2>📈 สถิติรวมทั้งหมด</h2>
+        <div class="grid-cards" id="totalStatsBox"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>👥 ตารางสถานะ CG รายเดือน</h2>
+      <div class="table-wrap">
+        <table id="cgStatusTable"><thead><tr>
+          <th>CG</th><th>ผู้สูงอายุในดูแล</th><th>เยี่ยมแล้ว</th><th>ความคืบหน้า</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📂 ดูข้อมูลที่บันทึก</h2>
+      <div class="breadcrumb" id="drillBreadcrumb"></div>
+      <div id="drillContent"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: RECORD VISIT -->
+  <div class="tab-panel" id="tab-record">
+    <div class="card">
+      <h2>📷 บันทึกการเยี่ยม</h2>
+      <div class="row">
+        <div class="field">
+          <label>1. เลือก CG</label>
+          <select id="recCg"><option value="">-- เลือก CG --</option></select>
+        </div>
+        <div class="field">
+          <label>2. เลือกผู้สูงอายุ</label>
+          <select id="recElderly"><option value="">-- เลือก CG ก่อน --</option></select>
+        </div>
+      </div>
+      <div id="recInfoCard"></div>
+
+      <div class="row">
+        <div class="field">
+          <label>3. เดือน</label>
+          <select id="recMonth"></select>
+        </div>
+        <div class="field">
+          <label>ปี (พ.ศ.)</label>
+          <select id="recYear"></select>
+        </div>
+        <div class="field">
+          <label>จำนวนวันที่เยี่ยม</label>
+          <input type="number" id="recDayCount" min="1" max="31" placeholder="เช่น 10">
+        </div>
+      </div>
+      <button class="btn btn-secondary" id="openCalendarBtn" type="button">🗓️ เลือกวันที่เยี่ยม</button>
+      <div class="chips-wrap" id="recDateChips"></div>
+
+      <hr class="sep">
+      <label>4. อัปโหลดรูปภาพ (เลือกได้หลายไฟล์)</label>
+      <input type="file" id="recPhotos" accept="image/*" multiple>
+      <div class="thumbs" id="recThumbs"></div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>หมายเหตุ (ถ้ามี)</label>
+        <textarea id="recNote" placeholder="หมายเหตุเพิ่มเติม..."></textarea>
+      </div>
+
+      <button class="btn btn-primary" id="saveVisitBtn" type="button" style="margin-top:6px;">💾 บันทึกการเยี่ยม</button>
+      <div class="upload-progress-text" id="uploadProgressText"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: MANAGE CG -->
+  <div class="tab-panel" id="tab-cg">
+    <div class="card">
+      <div class="section-actions">
+        <h2 style="margin:0;">👥 จัดการ CG (ผู้ดูแล)</h2>
+        <button class="btn btn-primary" id="addCgBtn">+ เพิ่ม CG</button>
+      </div>
+      <div class="table-wrap">
+        <table id="cgTable"><thead><tr>
+          <th>รหัส</th><th>ชื่อ</th><th>เบอร์โทร</th><th>หมู่ที่</th><th>ผู้สูงอายุในดูแล</th><th>สถานะ</th><th></th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: MANAGE ELDERLY -->
+  <div class="tab-panel" id="tab-elderly">
+    <div class="card">
+      <div class="section-actions">
+        <h2 style="margin:0;">👴 จัดการผู้สูงอายุ</h2>
+        <button class="btn btn-primary" id="addElderlyBtn">+ เพิ่มผู้สูงอายุ</button>
+      </div>
+      <div class="filter-bar">
+        <div class="field">
+          <label>กรองตาม CG</label>
+          <select id="filterElderlyCg"><option value="">ทั้งหมด</option></select>
+        </div>
+        <div class="field">
+          <label>กรองตามโหมด PDF</label>
+          <select id="filterElderlyMode">
+            <option value="">ทั้งหมด</option>
+            <option value="normal">ปกติ</option>
+            <option value="obt">อบต.</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="elderlyTable"><thead><tr>
+          <th>รหัส</th><th>ชื่อ</th><th>อายุ</th><th>เพศ</th><th>หมู่ที่</th><th>ADL</th><th>CG</th><th>โหมด PDF</th><th></th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: PDF -->
+  <div class="tab-panel" id="tab-pdf">
+    <div class="card">
+      <h2>📄 สร้างไฟล์ PDF สรุปการเยี่ยม</h2>
+      <div class="row">
+        <div class="field">
+          <label>เดือน</label>
+          <select id="pdfMonth"></select>
+        </div>
+        <div class="field">
+          <label>ปี (พ.ศ.)</label>
+          <select id="pdfYear"></select>
+        </div>
+        <div class="field">
+          <label>กรอง CG (ถ้าต้องการ)</label>
+          <select id="pdfCgFilter"><option value="">ทุก CG</option></select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="generatePdfBtn">📥 สร้างและดาวน์โหลด PDF</button>
+      <div class="upload-progress-text" id="pdfProgressText"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Generic Confirm Modal -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal-box">
+    <h3 id="confirmTitle">ยืนยันการดำเนินการ</h3>
+    <p id="confirmMsg" style="font-size:0.88rem;color:var(--text);"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="confirmCancelBtn">ยกเลิก</button>
+      <button class="btn btn-danger" id="confirmOkBtn">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<!-- CG Add/Edit Modal -->
+<div class="modal-overlay" id="cgModal">
+  <div class="modal-box">
+    <h3 id="cgModalTitle">เพิ่ม CG</h3>
+    <input type="hidden" id="cgEditId">
+    <div class="field"><label>ชื่อ-สกุล *</label><input type="text" id="cgName"></div>
+    <div class="field"><label>เบอร์โทร</label><input type="tel" id="cgPhone"></div>
+    <div class="row">
+      <div class="field"><label>บ้านเลขที่</label><input type="text" id="cgHouseNo"></div>
+      <div class="field"><label>หมู่ที่</label>
+        <select id="cgMoo"><option value="13">13</option><option value="15">15</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cgCancelBtn">ยกเลิก</button>
+      <button class="btn btn-primary" id="cgSaveBtn">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Elderly Add/Edit Modal -->
+<div class="modal-overlay" id="elderlyModal">
+  <div class="modal-box">
+    <h3 id="elderlyModalTitle">เพิ่มผู้สูงอายุ</h3>
+    <input type="hidden" id="elderlyEditId">
+    <div class="field"><label>ชื่อ-สกุล *</label><input type="text" id="elderlyName"></div>
+    <div class="row">
+      <div class="field"><label>HN (ถ้ามี)</label><input type="text" id="elderlyHn"></div>
+      <div class="field"><label>อายุ</label><input type="number" id="elderlyAge" min="0" max="130"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>เพศ</label>
+        <select id="elderlyGender"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select>
+      </div>
+      <div class="field"><label>กลุ่ม ADL</label>
+        <select id="elderlyAdl"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>บ้านเลขที่</label><input type="text" id="elderlyHouseNo"></div>
+      <div class="field"><label>หมู่ที่</label>
+        <select id="elderlyMoo"><option value="13">13</option><option value="15">15</option></select>
+      </div>
+    </div>
+    <div class="field"><label>CG ผู้ดูแล *</label><select id="elderlyCgCode"></select></div>
+    <div class="field"><label>โหมด PDF *</label>
+      <select id="elderlyPdfMode"><option value="normal">ปกติ (4 รูป/หน้า)</option><option value="obt">อบต. (10-12 รูป/หน้า)</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="elderlyCancelBtn">ยกเลิก</button>
+      <button class="btn btn-primary" id="elderlySaveBtn">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar Modal -->
+<div class="modal-overlay" id="calendarModal">
+  <div class="modal-box" style="max-width:400px;">
+    <h3 id="calendarModalTitle">เลือกวันที่เยี่ยม</h3>
+    <p style="font-size:0.8rem;color:var(--muted);margin:0 0 6px;">เลือกให้ครบตามจำนวนวันที่ระบุ</p>
+    <div class="calendar-grid" id="calendarDow"></div>
+    <div class="calendar-grid" id="calendarDays"></div>
+    <div class="chips-wrap" id="calendarSelectedChips"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="calendarCancelBtn">ยกเลิก</button>
+      <button class="btn btn-primary" id="calendarOkBtn">ตกลง</button>
+    </div>
+  </div>
+</div>
+
+<!-- Photo Edit Modal (from drill-down) -->
+<div class="modal-overlay" id="photoEditModal">
+  <div class="modal-box">
+    <h3>แก้ไขข้อมูลรูปภาพ</h3>
+    <input type="hidden" id="peVisitId">
+    <img id="peImg" style="width:100%;border-radius:8px;margin-bottom:10px;">
+    <div class="field"><label>วันที่เยี่ยม</label><input type="text" id="peDate" placeholder="YYYY-MM-DD"></div>
+    <div class="field"><label>หมายเหตุ</label><textarea id="peNote"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="peCancelBtn">ยกเลิก</button>
+      <button class="btn btn-primary" id="peSaveBtn">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Hidden PDF render container -->
+<div id="pdfRender"></div>
+
+<script>
+/* =========================================================
+   CONFIG
+========================================================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBiSA4yNJHb1YmnaYSn9zcDsByfUdck-jY",
+  authDomain: "ltc-05588.firebaseapp.com",
+  databaseURL: "https://ltc-05588-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ltc-05588",
+  storageBucket: "ltc-05588.firebasestorage.app",
+  messagingSenderId: "600582053674",
+  appId: "1:600582053674:web:99bb281fa5e649a1454853"
+};
+const IMGBB_API_KEY = "1ded683dd60e67f8ee962e3549f2a1fb";
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+const cgsRef = db.ref('cgs');
+const elderlyRef = db.ref('elderly');
+const visitsRef = db.ref('visits');
+
+/* =========================================================
+   STATE
+========================================================= */
+const STATE = { cgs:{}, elderly:{}, visits:{} };
+const DRILL = { level:1, cg:null, elderly:null };
+
+const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const THAI_MONTHS_ABBR = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const THAI_DOW = ["อา","จ","อ","พ","พฤ","ศ","ส"];
+
+function beYear(gy){ return gy + 543; }
+function ceYear(be){ return be - 543; }
+
+/* =========================================================
+   TOAST
+========================================================= */
+function showToast(msg, type){
+  type = type || 'info';
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(()=>el.remove(),320); }, 2600);
+}
+
+/* =========================================================
+   CUSTOM CONFIRM (Promise based, no browser confirm())
+========================================================= */
+function showConfirm(message, title){
+  return new Promise((resolve)=>{
+    const overlay = document.getElementById('confirmOverlay');
+    document.getElementById('confirmTitle').textContent = title || 'ยืนยันการดำเนินการ';
+    document.getElementById('confirmMsg').textContent = message;
+    overlay.classList.add('show');
+    const okBtn = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    function cleanup(result){
+      overlay.classList.remove('show');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onOk(){ cleanup(true); }
+    function onCancel(){ cleanup(false); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+/* =========================================================
+   TAB SWITCHING
+========================================================= */
+document.getElementById('tabbar').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab === 'dashboard') renderDashboard();
+  if(tab === 'cg') renderCgTable();
+  if(tab === 'elderly') renderElderlyTable();
+});
+
+/* =========================================================
+   ID GENERATORS
+========================================================= */
+function generateId(prefix, existingIds){
+  let max = 0;
+  const re = new RegExp('^'+prefix+'(\\d+)$');
+  existingIds.forEach(id=>{
+    const m = id.match(re);
+    if(m) max = Math.max(max, parseInt(m[1],10));
+  });
+  return prefix + String(max+1).padStart(3,'0');
+}
+
+/* =========================================================
+   MONTH/YEAR SELECT POPULATION
+========================================================= */
+function populateMonthYearSelects(){
+  const monthSelects = ['dashMonth','recMonth','pdfMonth'];
+  const yearSelects = ['dashYear','recYear','pdfYear'];
+  const now = new Date();
+  const curM = now.getMonth();
+  const curBY = beYear(now.getFullYear());
+  monthSelects.forEach(id=>{
+    const sel = document.getElementById(id);
+    sel.innerHTML = THAI_MONTHS.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+    sel.value = curM;
+  });
+  yearSelects.forEach(id=>{
+    const sel = document.getElementById(id);
+    let opts = '';
+    for(let y = curBY-3; y <= curBY+1; y++){ opts += `<option value="${y}">${y}</option>`; }
+    sel.innerHTML = opts;
+    sel.value = curBY;
+  });
+}
+
+/* =========================================================
+   IMAGE RESIZE (max 1200px, JPEG 0.85) -> dataURL
+========================================================= */
+function resizeImageFile(file, maxDim=1200, quality=0.85){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e)=>{ img.src = e.target.result; };
+    reader.onerror = reject;
+    img.onload = ()=>{
+      let { width, height } = img;
+      if(width > maxDim || height > maxDim){
+        if(width >= height){ height = Math.round(height * (maxDim/width)); width = maxDim; }
+        else { width = Math.round(width * (maxDim/height)); height = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* =========================================================
+   IMGBB UPLOAD
+========================================================= */
+async function uploadToImgbb(dataUrl){
+  const base64 = dataUrl.split(',')[1];
+  const form = new FormData();
+  form.append('image', base64);
+  const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_API_KEY, {
+    method:'POST', body: form
+  });
+  const json = await res.json();
+  if(!json.success) throw new Error('อัปโหลดรูปไม่สำเร็จ');
+  return json.data.url;
+}
+
+/* =========================================================
+   SHUFFLE
+========================================================= */
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+/* =========================================================
+   FIREBASE LISTENERS + SEED
+========================================================= */
+function seedIfEmpty(){
+  cgsRef.once('value').then(snap=>{
+    if(snap.exists()) return;
+    const now = Date.now();
+    const cgs = {
+      CG001:{name:'นางสาววินิจ หัสดง', phone:'', houseNo:'', moo:'13', status:'active', createdAt:now},
+      CG002:{name:'นางสาวศุภานัน มุ่งมาตร', phone:'', houseNo:'', moo:'13', status:'active', createdAt:now}
+    };
+    cgsRef.set(cgs).then(()=>{
+      const cg1 = [
+        ['นายอั้น ทันงาม',92,'ชาย'],['นางสาวสกุณา สุดแก้ว',24,'หญิง'],['นางสา วิลาช',84,'หญิง'],
+        ['นายเกลี้ยง วิลาช',87,'ชาย'],['นางเสาร์ สีดาชาติ',85,'หญิง'],['นายวิเชียร พุ่มผล',41,'ชาย'],
+        ['พระประทิน เทียนแดง',68,'ชาย'],['นายบุญช่วย ไสว',53,'ชาย'],['นางสมศรี ศรีเสริม',72,'หญิง'],
+        ['นายใสว บุญขาว',81,'ชาย'],['นายชนม์ นันทร',68,'ชาย'],['นางลิ้ม น้อยศรี',85,'หญิง'],
+        ['นายเลี่ยน หัสดง',68,'ชาย'],['นางสมจิตร หัสดง',59,'หญิง'],['นางสาวประพัมศรี บุญเลิศ',52,'หญิง']
+      ];
+      const cg2normal = [
+        ['นางลิ้ม รัตนพันธ์',80,'หญิง'],['นางทุม ลมเชย',76,'หญิง'],['นางรมย์ แก้วกันหา',76,'หญิง']
+      ];
+      const cg2obt = [
+        ['นางบุตร สุยไสย์',71,'หญิง'],['นายกิ ชินทอง',80,'ชาย'],['นายเวง สระเสรี',86,'ชาย'],
+        ['นายณัฐพงษ์ งำตัว',29,'ชาย'],['นายประดิษฐ์ ศรีปราชญ์',69,'ชาย'],['นายเสริฐ บ่งบุตร',69,'ชาย']
+      ];
+      const elderly = {};
+      let n = 1;
+      function addBatch(list, cgCode, pdfMode){
+        list.forEach(([name,age,gender])=>{
+          const id = 'E' + String(n++).padStart(3,'0');
+          elderly[id] = { name, hn:'', age, gender, houseNo:'', moo: cgCode==='CG001'?'13':'13', adlGroup:2, cgCode, pdfMode, status:'active', createdAt: now };
+        });
+      }
+      addBatch(cg1,'CG001','normal');
+      addBatch(cg2normal,'CG002','normal');
+      addBatch(cg2obt,'CG002','obt');
+      elderlyRef.set(elderly);
+    });
+    showToast('โหลดข้อมูลตัวอย่างเริ่มต้นเรียบร้อย','success');
+  });
+}
+
+cgsRef.on('value', snap=>{
+  STATE.cgs = snap.val() || {};
+  refreshAllDependentUI();
+});
+elderlyRef.on('value', snap=>{
+  STATE.elderly = snap.val() || {};
+  refreshAllDependentUI();
+});
+visitsRef.on('value', snap=>{
+  STATE.visits = snap.val() || {};
+  refreshAllDependentUI();
+});
+
+function refreshAllDependentUI(){
+  populateCgSelects();
+  populateElderlySelectsForRecordTab();
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  if(activeTab === 'dashboard') renderDashboard();
+  if(activeTab === 'cg') renderCgTable();
+  if(activeTab === 'elderly') renderElderlyTable();
+}
+
+function populateCgSelects(){
+  const cgIds = Object.keys(STATE.cgs).sort();
+  const opts = cgIds.map(id=>`<option value="${id}">${id} - ${escapeHtml(STATE.cgs[id].name)}</option>`).join('');
+  ['recCg','elderlyCgCode','pdfCgFilter','filterElderlyCg'].forEach(selId=>{
+    const sel = document.getElementById(selId);
+    if(!sel) return;
+    const cur = sel.value;
+    let prefix = '';
+    if(selId === 'pdfCgFilter') prefix = '<option value="">ทุก CG</option>';
+    if(selId === 'filterElderlyCg') prefix = '<option value="">ทั้งหมด</option>';
+    if(selId === 'recCg') prefix = '<option value="">-- เลือก CG --</option>';
+    sel.innerHTML = prefix + opts;
+    if(cgIds.includes(cur)) sel.value = cur;
+  });
+}
+
+function escapeHtml(s){
+  if(s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =========================================================
+   INIT ON LOAD
+========================================================= */
+window.addEventListener('DOMContentLoaded', ()=>{
+  populateMonthYearSelects();
+  seedIfEmpty();
+  renderDashboard();
+  bindRecordTabEvents();
+  bindCgTabEvents();
+  bindElderlyTabEvents();
+  bindPdfTabEvents();
+  document.getElementById('dashRefreshBtn').addEventListener('click', renderDashboard);
+  document.getElementById('dashMonth').addEventListener('change', renderDashboard);
+  document.getElementById('dashYear').addEventListener('change', renderDashboard);
+});
+
+/* =========================================================
+   ===================  DASHBOARD TAB  ======================
+========================================================= */
+function renderDashboard(){
+  const be = parseInt(document.getElementById('dashYear').value, 10);
+  const m = parseInt(document.getElementById('dashMonth').value, 10);
+  const gy = ceYear(be);
+
+  const visitsArr = Object.entries(STATE.visits || {}).map(([id,v])=>({id, ...v}));
+  const visitsThisMonth = visitsArr.filter(v=>{
+    if(!v.visitDate) return false;
+    const d = new Date(v.visitDate);
+    return d.getFullYear() === gy && d.getMonth() === m;
+  });
+
+  const cgIds = Object.keys(STATE.cgs || {});
+  const elderlyIds = Object.keys(STATE.elderly || {});
+  const elderlyVisitedThisMonthIds = new Set(visitsThisMonth.map(v=>v.elderlyId));
+  const cgsWithVisitsThisMonth = new Set(visitsThisMonth.map(v=>v.cgCode));
+
+  // Card 1: monthly stats
+  const monthlyBox = document.getElementById('monthlyStatsBox');
+  monthlyBox.innerHTML = `
+    <div class="stat-box"><div class="num">${cgsWithVisitsThisMonth.size}</div><div class="lbl">CG ที่มีการเยี่ยม</div></div>
+    <div class="stat-box blue"><div class="num">${elderlyIds.length}</div><div class="lbl">ผู้สูงอายุทั้งหมด</div></div>
+    <div class="stat-box"><div class="num">${elderlyVisitedThisMonthIds.size}</div><div class="lbl">เยี่ยมแล้ว</div></div>
+    <div class="stat-box orange"><div class="num">${Math.max(elderlyIds.length - elderlyVisitedThisMonthIds.size,0)}</div><div class="lbl">ยังไม่ได้เยี่ยม</div></div>
+    <div class="stat-box blue"><div class="num">${visitsThisMonth.length}</div><div class="lbl">จำนวนครั้ง (รูป)</div></div>
+  `;
+
+  // Card 2: overall stats
+  const normalCount = elderlyIds.filter(id=>STATE.elderly[id].pdfMode === 'normal').length;
+  const obtCount = elderlyIds.filter(id=>STATE.elderly[id].pdfMode === 'obt').length;
+  const totalBox = document.getElementById('totalStatsBox');
+  totalBox.innerHTML = `
+    <div class="stat-box"><div class="num">${visitsArr.length}</div><div class="lbl">บันทึกทั้งหมด</div></div>
+    <div class="stat-box blue"><div class="num">${cgIds.length}</div><div class="lbl">CG ทั้งหมด</div></div>
+    <div class="stat-box"><div class="num">${normalCount}</div><div class="lbl">โหมดปกติ</div></div>
+    <div class="stat-box orange"><div class="num">${obtCount}</div><div class="lbl">โหมด อบต.</div></div>
+  `;
+
+  // Card 3: CG status table
+  const tbody = document.querySelector('#cgStatusTable tbody');
+  if(cgIds.length === 0){
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">ยังไม่มีข้อมูล CG</td></tr>`;
+  } else {
+    tbody.innerHTML = cgIds.sort().map(cgId=>{
+      const cg = STATE.cgs[cgId];
+      const elderlyOfCg = elderlyIds.filter(id=>STATE.elderly[id].cgCode === cgId);
+      const visitedOfCg = elderlyOfCg.filter(id=>elderlyVisitedThisMonthIds.has(id));
+      const pct = elderlyOfCg.length ? Math.round(visitedOfCg.length / elderlyOfCg.length * 100) : 0;
+      return `<tr>
+        <td>${escapeHtml(cg.name)} <span class="badge gray">${cgId}</span></td>
+        <td>${elderlyOfCg.length}</td>
+        <td>${visitedOfCg.length}</td>
+        <td style="min-width:140px;">
+          <div class="row" style="gap:6px;align-items:center;">
+            <div class="progress-outer" style="flex:1;"><div class="progress-inner" style="width:${pct}%;"></div></div>
+            <span style="font-size:0.75rem;color:var(--muted);">${pct}%</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  DRILL.level = 1; DRILL.cg = null; DRILL.elderly = null;
+  renderDrillDown();
+}
+
+function renderDrillDown(){
+  const crumb = document.getElementById('drillBreadcrumb');
+  const content = document.getElementById('drillContent');
+  const visitsArr = Object.entries(STATE.visits || {}).map(([id,v])=>({id, ...v}));
+
+  if(DRILL.level === 1){
+    crumb.innerHTML = `<span class="current">📁 รายชื่อ CG</span>`;
+    const cgIds = Object.keys(STATE.cgs || {}).sort();
+    if(cgIds.length === 0){
+      content.innerHTML = `<div class="empty-state">ยังไม่มีข้อมูล CG</div>`;
+      return;
+    }
+    content.innerHTML = `<div class="drill-list">` + cgIds.map(cgId=>{
+      const cg = STATE.cgs[cgId];
+      const photoCount = visitsArr.filter(v=>v.cgCode === cgId).length;
+      return `<div class="drill-item" data-cg="${cgId}">
+        <div><strong>${escapeHtml(cg.name)}</strong> <span class="badge gray">${cgId}</span></div>
+        <div class="meta">${photoCount} รูป ›</div>
+      </div>`;
+    }).join('') + `</div>`;
+    content.querySelectorAll('.drill-item').forEach(el=>{
+      el.addEventListener('click', ()=>{ DRILL.level = 2; DRILL.cg = el.dataset.cg; renderDrillDown(); });
+    });
+  }
+
+  else if(DRILL.level === 2){
+    const cg = STATE.cgs[DRILL.cg];
+    crumb.innerHTML = `<span data-go="1">📁 รายชื่อ CG</span><span class="sep">›</span><span class="current">${escapeHtml(cg ? cg.name : DRILL.cg)}</span>`;
+    crumb.querySelector('[data-go="1"]').addEventListener('click', ()=>{ DRILL.level=1; renderDrillDown(); });
+    const elderlyIds = Object.keys(STATE.elderly || {}).filter(id=>STATE.elderly[id].cgCode === DRILL.cg).sort();
+    if(elderlyIds.length === 0){
+      content.innerHTML = `<div class="empty-state">CG นี้ยังไม่มีผู้สูงอายุในดูแล</div>`;
+      return;
+    }
+    content.innerHTML = `<div class="drill-list">` + elderlyIds.map(eid=>{
+      const e = STATE.elderly[eid];
+      const photoCount = visitsArr.filter(v=>v.elderlyId === eid).length;
+      return `<div class="drill-item" data-elderly="${eid}">
+        <div><strong>${escapeHtml(e.name)}</strong> <span class="badge ${e.pdfMode==='obt'?'blue':'green'}">${e.pdfMode==='obt'?'อบต.':'ปกติ'}</span></div>
+        <div class="meta">${photoCount} รูป ›</div>
+      </div>`;
+    }).join('') + `</div>`;
+    content.querySelectorAll('.drill-item').forEach(el=>{
+      el.addEventListener('click', ()=>{ DRILL.level = 3; DRILL.elderly = el.dataset.elderly; renderDrillDown(); });
+    });
+  }
+
+  else if(DRILL.level === 3){
+    const cg = STATE.cgs[DRILL.cg];
+    const e = STATE.elderly[DRILL.elderly];
+    crumb.innerHTML = `<span data-go="1">📁 รายชื่อ CG</span><span class="sep">›</span><span data-go="2">${escapeHtml(cg?cg.name:DRILL.cg)}</span><span class="sep">›</span><span class="current">${escapeHtml(e?e.name:DRILL.elderly)}</span>`;
+    crumb.querySelector('[data-go="1"]').addEventListener('click', ()=>{ DRILL.level=1; renderDrillDown(); });
+    crumb.querySelector('[data-go="2"]').addEventListener('click', ()=>{ DRILL.level=2; renderDrillDown(); });
+    const myVisits = visitsArr.filter(v=>v.elderlyId === DRILL.elderly).sort((a,b)=> new Date(a.visitDate) - new Date(b.visitDate));
+    if(myVisits.length === 0){
+      content.innerHTML = `<div class="empty-state">ยังไม่มีรูปภาพบันทึกไว้</div>`;
+      return;
+    }
+    content.innerHTML = `<div class="photo-grid">` + myVisits.map(v=>{
+      const d = v.visitDate ? formatThaiDateShort(v.visitDate) : '-';
+      return `<div class="photo-card">
+        <img src="${v.photoUrl}" loading="lazy" crossorigin="anonymous">
+        <div class="info">${d}${v.note?('<br>'+escapeHtml(v.note)):''}</div>
+        <div class="actions">
+          <button class="btn btn-outline btn-sm" data-edit="${v.id}">✏ แก้ไข</button>
+          <button class="btn btn-danger btn-sm" data-del="${v.id}">🗑 ลบ</button>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+    content.querySelectorAll('[data-edit]').forEach(btn=>{
+      btn.addEventListener('click', ()=>openPhotoEditModal(btn.dataset.edit));
+    });
+    content.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const ok = await showConfirm('ต้องการลบรูปนี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้', 'ยืนยันการลบรูปภาพ');
+        if(!ok) return;
+        await visitsRef.child(btn.dataset.del).remove();
+        showToast('ลบรูปภาพเรียบร้อย','success');
+      });
+    });
+  }
+}
+
+function formatThaiDateShort(isoDate){
+  const d = new Date(isoDate);
+  return `${d.getDate()} ${THAI_MONTHS_ABBR[d.getMonth()]} ${String(beYear(d.getFullYear())).slice(-2)}`;
+}
+
+function openPhotoEditModal(visitId){
+  const v = STATE.visits[visitId];
+  if(!v) return;
+  document.getElementById('peVisitId').value = visitId;
+  document.getElementById('peImg').src = v.photoUrl;
+  document.getElementById('peDate').value = v.visitDate || '';
+  document.getElementById('peNote').value = v.note || '';
+  document.getElementById('photoEditModal').classList.add('show');
+}
+document.getElementById('peCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('photoEditModal').classList.remove('show');
+});
+document.getElementById('peSaveBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('peVisitId').value;
+  const date = document.getElementById('peDate').value.trim();
+  const note = document.getElementById('peNote').value.trim();
+  if(!date){ showToast('กรุณาระบุวันที่','error'); return; }
+  await visitsRef.child(id).update({ visitDate: date, note });
+  document.getElementById('photoEditModal').classList.remove('show');
+  showToast('บันทึกการแก้ไขเรียบร้อย','success');
+});
+
+/* =========================================================
+   ===================  RECORD VISIT TAB  ====================
+========================================================= */
+let recSelectedDates = [];
+let recSelectedPhotos = []; // {file, dataUrl}
+
+function populateElderlySelectsForRecordTab(){
+  const cgSel = document.getElementById('recCg');
+  const elderlySel = document.getElementById('recElderly');
+  if(!cgSel || !elderlySel) return;
+  const chosenCg = cgSel.value;
+  if(!chosenCg){
+    elderlySel.innerHTML = '<option value="">-- เลือก CG ก่อน --</option>';
+    document.getElementById('recInfoCard').innerHTML = '';
+    return;
+  }
+  const ids = Object.keys(STATE.elderly || {}).filter(id=>STATE.elderly[id].cgCode === chosenCg).sort();
+  const cur = elderlySel.value;
+  elderlySel.innerHTML = '<option value="">-- เลือกผู้สูงอายุ --</option>' + ids.map(id=>`<option value="${id}">${escapeHtml(STATE.elderly[id].name)}</option>`).join('');
+  if(ids.includes(cur)) elderlySel.value = cur;
+  updateRecInfoCard();
+}
+
+function updateRecInfoCard(){
+  const eid = document.getElementById('recElderly').value;
+  const box = document.getElementById('recInfoCard');
+  if(!eid || !STATE.elderly[eid]){ box.innerHTML = ''; return; }
+  const e = STATE.elderly[eid];
+  box.innerHTML = `<div class="info-card">ℹ️ <strong>${escapeHtml(e.name)}</strong> — โหมด PDF: <strong>${e.pdfMode === 'obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)'}</strong> | อายุ ${e.age||'-'} ปี | ADL กลุ่ม ${e.adlGroup||'-'}</div>`;
+}
+
+function bindRecordTabEvents(){
+  document.getElementById('recCg').addEventListener('change', ()=>{
+    populateElderlySelectsForRecordTab();
+  });
+  document.getElementById('recElderly').addEventListener('change', updateRecInfoCard);
+
+  document.getElementById('openCalendarBtn').addEventListener('click', ()=>{
+    const be = parseInt(document.getElementById('recYear').value, 10);
+    const m = parseInt(document.getElementById('recMonth').value, 10);
+    const count = parseInt(document.getElementById('recDayCount').value, 10);
+    if(!count || count < 1){ showToast('กรุณาระบุจำนวนวันที่เยี่ยมก่อน','error'); return; }
+    openCalendarModal(ceYear(be), m, count);
+  });
+
+  document.getElementById('recPhotos').addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files || []);
+    if(files.length === 0) return;
+    const thumbsBox = document.getElementById('recThumbs');
+    thumbsBox.innerHTML = '<span style="font-size:0.8rem;color:var(--muted);">กำลังประมวลผลรูปภาพ...</span>';
+    recSelectedPhotos = [];
+    for(const file of files){
+      const dataUrl = await resizeImageFile(file);
+      recSelectedPhotos.push({ file, dataUrl });
+    }
+    thumbsBox.innerHTML = recSelectedPhotos.map(p=>`<img src="${p.dataUrl}">`).join('');
+  });
+
+  document.getElementById('saveVisitBtn').addEventListener('click', saveVisitRecords);
+}
+
+/* ---- Calendar Modal ---- */
+let calendarResolveCount = 0;
+let calendarYear = 0, calendarMonth = 0;
+let calendarTempSelected = [];
+
+function openCalendarModal(gy, month, requiredCount){
+  calendarYear = gy; calendarMonth = month; calendarResolveCount = requiredCount;
+  calendarTempSelected = recSelectedDates.slice();
+  document.getElementById('calendarModalTitle').textContent = `เลือกวันที่เยี่ยม (${requiredCount} วัน) - ${THAI_MONTHS[month]} ${beYear(gy)}`;
+  const dowBox = document.getElementById('calendarDow');
+  dowBox.innerHTML = THAI_DOW.map(d=>`<div class="dow">${d}</div>`).join('');
+  renderCalendarDays();
+  document.getElementById('calendarModal').classList.add('show');
+}
+
+function renderCalendarDays(){
+  const daysBox = document.getElementById('calendarDays');
+  const firstDow = new Date(calendarYear, calendarMonth, 1).getDay();
+  const daysInMonth = new Date(calendarYear, calendarMonth+1, 0).getDate();
+  let html = '';
+  for(let i=0;i<firstDow;i++) html += `<div class="day blank"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const iso = isoDate(calendarYear, calendarMonth, d);
+    const sel = calendarTempSelected.includes(iso);
+    html += `<div class="day ${sel?'sel':''}" data-date="${iso}">${d}</div>`;
+  }
+  daysBox.innerHTML = html;
+  daysBox.querySelectorAll('.day[data-date]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const iso = el.dataset.date;
+      const idx = calendarTempSelected.indexOf(iso);
+      if(idx >= 0) calendarTempSelected.splice(idx,1);
+      else calendarTempSelected.push(iso);
+      renderCalendarDays();
+      renderCalendarChips();
+    });
+  });
+  renderCalendarChips();
+}
+
+function renderCalendarChips(){
+  const box = document.getElementById('calendarSelectedChips');
+  const sorted = calendarTempSelected.slice().sort();
+  box.innerHTML = sorted.map(iso=>`<span class="chip">${formatThaiDateShort(iso)}<span class="rm" data-rm="${iso}">×</span></span>`).join('')
+    + `<div style="width:100%;font-size:0.75rem;color:var(--muted);margin-top:4px;">เลือกแล้ว ${sorted.length} / ${calendarResolveCount} วัน</div>`;
+  box.querySelectorAll('[data-rm]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const iso = el.dataset.rm;
+      calendarTempSelected = calendarTempSelected.filter(x=>x!==iso);
+      renderCalendarDays();
+    });
+  });
+}
+
+document.getElementById('calendarCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('calendarModal').classList.remove('show');
+});
+document.getElementById('calendarOkBtn').addEventListener('click', ()=>{
+  if(calendarTempSelected.length !== calendarResolveCount){
+    showToast(`กรุณาเลือกให้ครบ ${calendarResolveCount} วัน (เลือกแล้ว ${calendarTempSelected.length} วัน)`, 'error');
+    return;
+  }
+  recSelectedDates = calendarTempSelected.slice().sort();
+  renderRecDateChips();
+  document.getElementById('calendarModal').classList.remove('show');
+});
+
+function isoDate(gy, month, day){
+  const mm = String(month+1).padStart(2,'0');
+  const dd = String(day).padStart(2,'0');
+  return `${gy}-${mm}-${dd}`;
+}
+
+function renderRecDateChips(){
+  const box = document.getElementById('recDateChips');
+  box.innerHTML = recSelectedDates.map(iso=>`<span class="chip">${formatThaiDateShort(iso)}</span>`).join('');
+}
+
+/* ---- Save Visit(s) ---- */
+async function saveVisitRecords(){
+  const cgCode = document.getElementById('recCg').value;
+  const elderlyId = document.getElementById('recElderly').value;
+  if(!cgCode || !elderlyId){ showToast('กรุณาเลือก CG และผู้สูงอายุ','error'); return; }
+  if(recSelectedDates.length === 0){ showToast('กรุณาเลือกวันที่เยี่ยม','error'); return; }
+  if(recSelectedPhotos.length === 0){ showToast('กรุณาอัปโหลดรูปภาพ','error'); return; }
+  if(recSelectedPhotos.length !== recSelectedDates.length){
+    showToast(`จำนวนรูป (${recSelectedPhotos.length}) ต้องเท่ากับจำนวนวันที่เลือก (${recSelectedDates.length})`, 'error');
+    return;
+  }
+  const e = STATE.elderly[elderlyId];
+  const cg = STATE.cgs[cgCode];
+  const note = document.getElementById('recNote').value.trim();
+
+  const shuffledDates = shuffleArray(recSelectedDates);
+  const saveBtn = document.getElementById('saveVisitBtn');
+  saveBtn.disabled = true;
+  const progressText = document.getElementById('uploadProgressText');
+  const total = recSelectedPhotos.length;
+  const updates = {};
+
+  try{
+    for(let i=0;i<total;i++){
+      progressText.textContent = `กำลังอัปโหลด... ${i+1}/${total}`;
+      const url = await uploadToImgbb(recSelectedPhotos[i].dataUrl);
+      const visitId = 'V' + Date.now() + '_' + i;
+      updates[visitId] = {
+        visitDate: shuffledDates[i],
+        recordedAt: Date.now(),
+        elderlyId, elderlyName: e.name,
+        cgCode, cgName: cg.name,
+        photoUrl: url,
+        note, pdfMode: e.pdfMode
+      };
+    }
+    await visitsRef.update(updates);
+    showToast(`บันทึกการเยี่ยมสำเร็จ ${total} รายการ`, 'success');
+    // reset form
+    recSelectedDates = []; recSelectedPhotos = [];
+    document.getElementById('recDateChips').innerHTML = '';
+    document.getElementById('recThumbs').innerHTML = '';
+    document.getElementById('recPhotos').value = '';
+    document.getElementById('recDayCount').value = '';
+    document.getElementById('recNote').value = '';
+    progressText.textContent = '';
+  } catch(err){
+    console.error(err);
+    showToast('เกิดข้อผิดพลาดในการบันทึก: ' + err.message, 'error');
+    progressText.textContent = '';
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+/* =========================================================
+   ===================  MANAGE CG TAB  =======================
+========================================================= */
+function renderCgTable(){
+  const tbody = document.querySelector('#cgTable tbody');
+  const cgIds = Object.keys(STATE.cgs || {}).sort();
+  if(cgIds.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">ยังไม่มีข้อมูล CG กด "+ เพิ่ม CG" เพื่อเริ่มต้น</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = cgIds.map(id=>{
+    const cg = STATE.cgs[id];
+    const elderlyCount = Object.keys(STATE.elderly||{}).filter(eid=>STATE.elderly[eid].cgCode===id).length;
+    return `<tr>
+      <td>${id}</td>
+      <td>${escapeHtml(cg.name)}</td>
+      <td>${escapeHtml(cg.phone||'-')}</td>
+      <td>${escapeHtml(cg.moo||'-')}</td>
+      <td>${elderlyCount}</td>
+      <td><span class="badge ${cg.status==='active'?'green':'gray'}">${cg.status==='active'?'ใช้งาน':'ปิดใช้งาน'}</span></td>
+      <td>
+        <button class="btn btn-outline btn-sm" data-edit-cg="${id}">✏ แก้ไข</button>
+        <button class="btn btn-danger btn-sm" data-del-cg="${id}">🗑 ลบ</button>
+      </td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('[data-edit-cg]').forEach(btn=>btn.addEventListener('click', ()=>openCgModal(btn.dataset.editCg)));
+  tbody.querySelectorAll('[data-del-cg]').forEach(btn=>btn.addEventListener('click', ()=>deleteCg(btn.dataset.delCg)));
+}
+
+function bindCgTabEvents(){
+  document.getElementById('addCgBtn').addEventListener('click', ()=>openCgModal(null));
+  document.getElementById('cgCancelBtn').addEventListener('click', ()=>document.getElementById('cgModal').classList.remove('show'));
+  document.getElementById('cgSaveBtn').addEventListener('click', saveCg);
+}
+
+function openCgModal(cgId){
+  document.getElementById('cgEditId').value = cgId || '';
+  document.getElementById('cgModalTitle').textContent = cgId ? 'แก้ไขข้อมูล CG' : 'เพิ่ม CG';
+  if(cgId){
+    const cg = STATE.cgs[cgId];
+    document.getElementById('cgName').value = cg.name || '';
+    document.getElementById('cgPhone').value = cg.phone || '';
+    document.getElementById('cgHouseNo').value = cg.houseNo || '';
+    document.getElementById('cgMoo').value = cg.moo || '13';
+  } else {
+    document.getElementById('cgName').value = '';
+    document.getElementById('cgPhone').value = '';
+    document.getElementById('cgHouseNo').value = '';
+    document.getElementById('cgMoo').value = '13';
+  }
+  document.getElementById('cgModal').classList.add('show');
+}
+
+async function saveCg(){
+  const name = document.getElementById('cgName').value.trim();
+  if(!name){ showToast('กรุณาระบุชื่อ CG','error'); return; }
+  const editId = document.getElementById('cgEditId').value;
+  const data = {
+    name,
+    phone: document.getElementById('cgPhone').value.trim(),
+    houseNo: document.getElementById('cgHouseNo').value.trim(),
+    moo: document.getElementById('cgMoo').value,
+    status: 'active'
+  };
+  if(editId){
+    await cgsRef.child(editId).update(data);
+    showToast('แก้ไขข้อมูล CG เรียบร้อย','success');
+  } else {
+    const id = generateId('CG', Object.keys(STATE.cgs||{}));
+    data.createdAt = Date.now();
+    await cgsRef.child(id).set(data);
+    showToast('เพิ่ม CG เรียบร้อย','success');
+  }
+  document.getElementById('cgModal').classList.remove('show');
+}
+
+async function deleteCg(cgId){
+  const hasElderly = Object.keys(STATE.elderly||{}).some(eid=>STATE.elderly[eid].cgCode===cgId);
+  if(hasElderly){
+    showToast('ไม่สามารถลบได้ เนื่องจากยังมีผู้สูงอายุในความดูแลของ CG นี้','error');
+    return;
+  }
+  const ok = await showConfirm('ต้องการลบ CG นี้ใช่หรือไม่?', 'ยืนยันการลบ');
+  if(!ok) return;
+  await cgsRef.child(cgId).remove();
+  showToast('ลบ CG เรียบร้อย','success');
+}
+
+/* =========================================================
+   ===================  MANAGE ELDERLY TAB  ===================
+========================================================= */
+function renderElderlyTable(){
+  const cgFilter = document.getElementById('filterElderlyCg').value;
+  const modeFilter = document.getElementById('filterElderlyMode').value;
+  const tbody = document.querySelector('#elderlyTable tbody');
+  let ids = Object.keys(STATE.elderly || {}).sort();
+  if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(modeFilter) ids = ids.filter(id=>STATE.elderly[id].pdfMode === modeFilter);
+  if(ids.length === 0){
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ids.map(id=>{
+    const e = STATE.elderly[id];
+    const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : e.cgCode;
+    return `<tr>
+      <td>${id}</td>
+      <td>${escapeHtml(e.name)}</td>
+      <td>${e.age||'-'}</td>
+      <td>${escapeHtml(e.gender||'-')}</td>
+      <td>${escapeHtml(e.moo||'-')}</td>
+      <td>${e.adlGroup||'-'}</td>
+      <td>${escapeHtml(cgName)}</td>
+      <td><span class="badge ${e.pdfMode==='obt'?'blue':'green'}">${e.pdfMode==='obt'?'อบต.':'ปกติ'}</span></td>
+      <td>
+        <button class="btn btn-outline btn-sm" data-edit-e="${id}">✏ แก้ไข</button>
+        <button class="btn btn-danger btn-sm" data-del-e="${id}">🗑 ลบ</button>
+      </td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('[data-edit-e]').forEach(btn=>btn.addEventListener('click', ()=>openElderlyModal(btn.dataset.editE)));
+  tbody.querySelectorAll('[data-del-e]').forEach(btn=>btn.addEventListener('click', ()=>deleteElderly(btn.dataset.delE)));
+}
+
+function bindElderlyTabEvents(){
+  document.getElementById('addElderlyBtn').addEventListener('click', ()=>openElderlyModal(null));
+  document.getElementById('elderlyCancelBtn').addEventListener('click', ()=>document.getElementById('elderlyModal').classList.remove('show'));
+  document.getElementById('elderlySaveBtn').addEventListener('click', saveElderly);
+  document.getElementById('filterElderlyCg').addEventListener('change', renderElderlyTable);
+  document.getElementById('filterElderlyMode').addEventListener('change', renderElderlyTable);
+}
+
+function openElderlyModal(eid){
+  document.getElementById('elderlyEditId').value = eid || '';
+  document.getElementById('elderlyModalTitle').textContent = eid ? 'แก้ไขข้อมูลผู้สูงอายุ' : 'เพิ่มผู้สูงอายุ';
+  const cgIds = Object.keys(STATE.cgs||{}).sort();
+  document.getElementById('elderlyCgCode').innerHTML = cgIds.map(id=>`<option value="${id}">${id} - ${escapeHtml(STATE.cgs[id].name)}</option>`).join('') || '<option value="">-- ยังไม่มี CG --</option>';
+  if(eid){
+    const e = STATE.elderly[eid];
+    document.getElementById('elderlyName').value = e.name || '';
+    document.getElementById('elderlyHn').value = e.hn || '';
+    document.getElementById('elderlyAge').value = e.age || '';
+    document.getElementById('elderlyGender').value = e.gender || 'ชาย';
+    document.getElementById('elderlyAdl').value = e.adlGroup || '1';
+    document.getElementById('elderlyHouseNo').value = e.houseNo || '';
+    document.getElementById('elderlyMoo').value = e.moo || '13';
+    document.getElementById('elderlyCgCode').value = e.cgCode || '';
+    document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
+  } else {
+    document.getElementById('elderlyName').value = '';
+    document.getElementById('elderlyHn').value = '';
+    document.getElementById('elderlyAge').value = '';
+    document.getElementById('elderlyGender').value = 'ชาย';
+    document.getElementById('elderlyAdl').value = '1';
+    document.getElementById('elderlyHouseNo').value = '';
+    document.getElementById('elderlyMoo').value = '13';
+    document.getElementById('elderlyPdfMode').value = 'normal';
+  }
+  document.getElementById('elderlyModal').classList.add('show');
+}
+
+async function saveElderly(){
+  const name = document.getElementById('elderlyName').value.trim();
+  const cgCode = document.getElementById('elderlyCgCode').value;
+  if(!name){ showToast('กรุณาระบุชื่อผู้สูงอายุ','error'); return; }
+  if(!cgCode){ showToast('กรุณาเลือก CG ผู้ดูแล','error'); return; }
+  const editId = document.getElementById('elderlyEditId').value;
+  const data = {
+    name,
+    hn: document.getElementById('elderlyHn').value.trim(),
+    age: parseInt(document.getElementById('elderlyAge').value,10) || 0,
+    gender: document.getElementById('elderlyGender').value,
+    adlGroup: parseInt(document.getElementById('elderlyAdl').value,10),
+    houseNo: document.getElementById('elderlyHouseNo').value.trim(),
+    moo: document.getElementById('elderlyMoo').value,
+    cgCode,
+    pdfMode: document.getElementById('elderlyPdfMode').value,
+    status: 'active'
+  };
+  if(editId){
+    await elderlyRef.child(editId).update(data);
+    showToast('แก้ไขข้อมูลผู้สูงอายุเรียบร้อย','success');
+  } else {
+    const id = generateId('E', Object.keys(STATE.elderly||{}));
+    data.createdAt = Date.now();
+    await elderlyRef.child(id).set(data);
+    showToast('เพิ่มผู้สูงอายุเรียบร้อย','success');
+  }
+  document.getElementById('elderlyModal').classList.remove('show');
+}
+
+async function deleteElderly(eid){
+  const ok = await showConfirm('ต้องการลบผู้สูงอายุนี้ใช่หรือไม่? ข้อมูลการเยี่ยมทั้งหมดของบุคคลนี้จะถูกลบด้วย', 'ยืนยันการลบ');
+  if(!ok) return;
+  const visitIdsToRemove = Object.keys(STATE.visits||{}).filter(vid=>STATE.visits[vid].elderlyId === eid);
+  const updates = {};
+  visitIdsToRemove.forEach(vid=> updates['/visits/'+vid] = null);
+  updates['/elderly/'+eid] = null;
+  await db.ref().update(updates);
+  showToast('ลบผู้สูงอายุและข้อมูลการเยี่ยมที่เกี่ยวข้องเรียบร้อย','success');
+}
+
+/* =========================================================
+   ===================  PDF GENERATION TAB  ===================
+========================================================= */
+function bindPdfTabEvents(){
+  document.getElementById('generatePdfBtn').addEventListener('click', generatePdf);
+}
+
+function chunkArray(arr, size){
+  const out = [];
+  for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i, i+size));
+  return out;
+}
+
+async function generatePdf(){
+  const be = parseInt(document.getElementById('pdfYear').value, 10);
+  const month = parseInt(document.getElementById('pdfMonth').value, 10);
+  const gy = ceYear(be);
+  const cgFilter = document.getElementById('pdfCgFilter').value;
+  const progressText = document.getElementById('pdfProgressText');
+  const btn = document.getElementById('generatePdfBtn');
+
+  const visitsArr = Object.values(STATE.visits || {}).filter(v=>{
+    if(!v.visitDate) return false;
+    const d = new Date(v.visitDate);
+    if(d.getFullYear() !== gy || d.getMonth() !== month) return false;
+    if(cgFilter && v.cgCode !== cgFilter) return false;
+    return true;
+  });
+
+  if(visitsArr.length === 0){
+    showToast('ไม่พบข้อมูลการเยี่ยมในเดือน/ปีที่เลือก','error');
+    return;
+  }
+
+  // group by elderlyId
+  const byElderly = {};
+  visitsArr.forEach(v=>{
+    if(!byElderly[v.elderlyId]) byElderly[v.elderlyId] = [];
+    byElderly[v.elderlyId].push(v);
+  });
+  Object.values(byElderly).forEach(list=> list.sort((a,b)=> new Date(a.visitDate) - new Date(b.visitDate)));
+
+  const elderlyIdsSorted = Object.keys(byElderly).sort((a,b)=>{
+    const ea = STATE.elderly[a], eb = STATE.elderly[b];
+    return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
+  });
+
+  // build page list: [{elderlyId, photos:[...]}]
+  const pages = [];
+  elderlyIdsSorted.forEach(eid=>{
+    const e = STATE.elderly[eid] || { name: eid, pdfMode:'normal' };
+    const list = byElderly[eid];
+    const chunkSize = e.pdfMode === 'obt' ? 12 : 4;
+    const chunks = chunkArray(list, chunkSize);
+    chunks.forEach(chunk=> pages.push({ elderly: e, photos: chunk, allDays: list.map(v=> new Date(v.visitDate).getDate()) }));
+  });
+
+  btn.disabled = true;
+  const renderRoot = document.getElementById('pdfRender');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+
+  try{
+    for(let i=0;i<pages.length;i++){
+      progressText.textContent = `กำลังสร้างหน้า ${i+1}/${pages.length}`;
+      const page = pages[i];
+      const pageEl = buildPdfPageElement(page, month, be);
+      renderRoot.innerHTML = '';
+      renderRoot.appendChild(pageEl);
+      await new Promise(r=>setTimeout(r, 320)); // allow images to load
+      const canvas = await html2canvas(pageEl, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      if(i > 0) doc.addPage();
+      doc.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+    }
+    const filename = `สรุปการเยี่ยม_${THAI_MONTHS[month]}${be}.pdf`;
+    doc.save(filename);
+    showToast('สร้างไฟล์ PDF เรียบร้อย','success');
+  } catch(err){
+    console.error(err);
+    showToast('เกิดข้อผิดพลาดในการสร้าง PDF: ' + err.message, 'error');
+  } finally {
+    renderRoot.innerHTML = '';
+    progressText.textContent = '';
+    btn.disabled = false;
+  }
+}
+
+function buildPdfPageElement(page, month, be){
+  const e = page.elderly;
+  const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : (e.cgCode || '-');
+  const wrap = document.createElement('div');
+  wrap.className = 'pdfpage';
+
+  const monthLabel = THAI_MONTHS[month];
+  if(e.pdfMode === 'obt'){
+    const daysSorted = Array.from(new Set(page.allDays)).sort((a,b)=>a-b);
+    wrap.innerHTML = `
+      <div class="pt-title">ภาพดูแลผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+      <div class="pt-sub">ประจำเดือน ${monthLabel} ${be}</div>
+      <div class="pt-name">ชื่อ ${escapeHtml(e.name)} อายุ ${e.age||'-'} ปี วันที่ ${daysSorted.join(',')} ${monthLabel} ${be}</div>
+    `;
+    const count = page.photos.length;
+    const cols = count <= 10 ? 5 : 4;
+    const grid = document.createElement('div');
+    grid.className = 'pt-grid';
+    grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+    page.photos.forEach(v=>{
+      const cell = document.createElement('div');
+      cell.className = 'pt-cell';
+      const shortD = formatThaiDateVeryShort(v.visitDate);
+      cell.innerHTML = `<img src="${v.photoUrl}" crossorigin="anonymous"><div class="d">${shortD}</div>`;
+      grid.appendChild(cell);
+    });
+    wrap.appendChild(grid);
+  } else {
+    wrap.innerHTML = `
+      <div class="pt-title">ภาพกิจกรรมเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+      <div class="pt-sub">ประจำเดือน ${monthLabel} ${be}</div>
+      <div class="pt-name">${escapeHtml(e.name)}</div>
+    `;
+    const grid = document.createElement('div');
+    grid.className = 'pt-grid';
+    grid.style.gridTemplateColumns = 'repeat(2,1fr)';
+    page.photos.forEach(v=>{
+      const cell = document.createElement('div');
+      cell.className = 'pt-cell';
+      const d = formatThaiDateShort(v.visitDate);
+      cell.innerHTML = `<img src="${v.photoUrl}" crossorigin="anonymous"><div class="d">${d}</div>`;
+      grid.appendChild(cell);
+    });
+    wrap.appendChild(grid);
+  }
+
+  const footer = document.createElement('div');
+  footer.className = 'pt-footer';
+  footer.textContent = `CG: ${cgName} | รพ.สต.บ้านนายอ`;
+  wrap.appendChild(footer);
+  return wrap;
+}
+
+function formatThaiDateVeryShort(isoDate){
+  const d = new Date(isoDate);
+  return `${d.getDate()} ${THAI_MONTHS_ABBR[d.getMonth()]}`;
+}
+</script>
+</body>
+</html>
