@@ -513,7 +513,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       </div>
       <div class="table-wrap">
         <table id="elderlyTable"><thead><tr>
-          <th>รหัส</th><th>ชื่อ</th><th>อายุ</th><th>เพศ</th><th>หมู่ที่</th><th>ADL</th><th>CG</th><th>โหมด PDF</th><th></th>
+          <th>รหัส</th><th>ชื่อ</th><th>อายุ</th><th>เพศ</th><th>หมู่ที่</th><th>คะแนน ADL</th><th>TAI</th><th>กลุ่ม ADL</th><th>CG</th><th>โหมด PDF</th><th></th>
         </tr></thead><tbody></tbody></table>
       </div>
     </div>
@@ -598,21 +598,42 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <input type="hidden" id="elderlyEditId">
     <div class="field"><label>ชื่อ-สกุล *</label><input type="text" id="elderlyName"></div>
     <div class="row">
+      <div class="field"><label>เลขบัตรประชาชน</label><input type="text" id="elderlyIdCard" maxlength="13" inputmode="numeric" placeholder="13 หลัก"></div>
       <div class="field"><label>HN (ถ้ามี)</label><input type="text" id="elderlyHn"></div>
-      <div class="field"><label>อายุ</label><input type="number" id="elderlyAge" min="0" max="130"></div>
     </div>
     <div class="row">
+      <div class="field"><label>อายุ</label><input type="number" id="elderlyAge" min="0" max="130"></div>
       <div class="field"><label>เพศ</label>
         <select id="elderlyGender"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select>
-      </div>
-      <div class="field"><label>กลุ่ม ADL</label>
-        <select id="elderlyAdl"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
       </div>
     </div>
     <div class="row">
       <div class="field"><label>บ้านเลขที่</label><input type="text" id="elderlyHouseNo"></div>
       <div class="field"><label>หมู่ที่</label>
         <select id="elderlyMoo"><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="5">5</option><option value="12">12</option><option value="18">18</option><option value="20">20</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>คะแนน ADL</label><input type="number" id="elderlyAdlScore" min="0" max="20" placeholder="0-20"></div>
+      <div class="field"><label>TAI</label>
+        <select id="elderlyTai">
+          <option value="">-- ไม่ระบุ --</option>
+          <option value="B3">B3</option><option value="B4">B4</option>
+          <option value="C2">C2</option><option value="C3">C3</option><option value="C4">C4</option>
+          <option value="I1">I1</option><option value="I2">I2</option><option value="I3">I3</option><option value="I4">I4</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>กลุ่ม ADL</label>
+      <select id="elderlyAdl"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+    </div>
+    <div class="field"><label>ปัญหาสุขภาพ</label><textarea id="elderlyHealthProblem" maxlength="100" placeholder="ไม่เกิน 100 ตัวอักษร"></textarea></div>
+    <div class="field"><label>ความต้องการ</label><textarea id="elderlyNeed" maxlength="100" placeholder="ไม่เกิน 100 ตัวอักษร"></textarea></div>
+    <div class="field">
+      <label>รูปภาพผู้สูงอายุ (ขนาด 1200 x 675 px)</label>
+      <input type="file" id="elderlyPhotoInput" accept="image/*">
+      <div id="elderlyPhotoPreviewWrap" style="margin-top:8px;display:none;">
+        <img id="elderlyPhotoPreview" src="" style="width:100%;max-width:240px;aspect-ratio:1200/675;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block;">
       </div>
     </div>
     <div class="field"><label>CG ผู้ดูแล *</label><select id="elderlyCgCode"></select></div>
@@ -1000,6 +1021,41 @@ function resizeImageFile(file, maxDim=1200, quality=0.85){
 }
 
 /* =========================================================
+   IMAGE RESIZE + CENTER-CROP TO FIXED SIZE (default 1200x675) -> dataURL
+========================================================= */
+function resizeImageFileCover(file, targetW=1200, targetH=675, quality=0.85){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e)=>{ img.src = e.target.result; };
+    reader.onerror = reject;
+    img.onload = ()=>{
+      const targetRatio = targetW / targetH;
+      const srcRatio = img.width / img.height;
+      let sx, sy, sw, sh;
+      if(srcRatio > targetRatio){
+        sh = img.height;
+        sw = sh * targetRatio;
+        sx = (img.width - sw) / 2;
+        sy = 0;
+      } else {
+        sw = img.width;
+        sh = sw / targetRatio;
+        sx = 0;
+        sy = (img.height - sh) / 2;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW; canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* =========================================================
    IMGBB UPLOAD
 ========================================================= */
 async function uploadToImgbb(dataUrl){
@@ -1313,6 +1369,7 @@ document.getElementById('peSaveBtn').addEventListener('click', async ()=>{
 ========================================================= */
 let recSelectedDates = [];
 let recSelectedPhotos = []; // {file, dataUrl}
+let elderlySelectedPhotoDataUrl = null; // pending new/updated elderly profile photo
 
 function populateElderlySelectsForRecordTab(){
   const cgSel = document.getElementById('recCg');
@@ -1614,7 +1671,7 @@ function renderElderlyTable(){
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
   if(modeFilter) ids = ids.filter(id=>STATE.elderly[id].pdfMode === modeFilter);
   if(ids.length === 0){
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
     return;
   }
   tbody.innerHTML = ids.map(id=>{
@@ -1626,6 +1683,8 @@ function renderElderlyTable(){
       <td>${e.age||'-'}</td>
       <td>${escapeHtml(e.gender||'-')}</td>
       <td>${escapeHtml(e.moo||'-')}</td>
+      <td>${(e.adlScore !== undefined && e.adlScore !== null && e.adlScore !== '') ? e.adlScore : '-'}</td>
+      <td>${escapeHtml(e.tai||'-')}</td>
       <td>${e.adlGroup||'-'}</td>
       <td>${escapeHtml(cgName)}</td>
       <td><span class="badge ${e.pdfMode==='obt'?'blue':'green'}">${e.pdfMode==='obt'?'อบต.':'ปกติ'}</span></td>
@@ -1645,6 +1704,14 @@ function bindElderlyTabEvents(){
   document.getElementById('elderlySaveBtn').addEventListener('click', saveElderly);
   document.getElementById('filterElderlyCg').addEventListener('change', renderElderlyTable);
   document.getElementById('filterElderlyMode').addEventListener('change', renderElderlyTable);
+  document.getElementById('elderlyPhotoInput').addEventListener('change', async (ev)=>{
+    const file = ev.target.files && ev.target.files[0];
+    if(!file) return;
+    elderlySelectedPhotoDataUrl = await resizeImageFileCover(file, 1200, 675);
+    const previewWrap = document.getElementById('elderlyPhotoPreviewWrap');
+    document.getElementById('elderlyPhotoPreview').src = elderlySelectedPhotoDataUrl;
+    previewWrap.style.display = 'block';
+  });
 }
 
 function openElderlyModal(eid){
@@ -1652,26 +1719,43 @@ function openElderlyModal(eid){
   document.getElementById('elderlyModalTitle').textContent = eid ? 'แก้ไขข้อมูลผู้สูงอายุ' : 'เพิ่มผู้สูงอายุ';
   const cgIds = Object.keys(STATE.cgs||{}).sort();
   document.getElementById('elderlyCgCode').innerHTML = cgIds.map(id=>`<option value="${id}">${id} - ${escapeHtml(STATE.cgs[id].name)}</option>`).join('') || '<option value="">-- ยังไม่มี CG --</option>';
+  elderlySelectedPhotoDataUrl = null;
+  document.getElementById('elderlyPhotoInput').value = '';
+  const previewWrap = document.getElementById('elderlyPhotoPreviewWrap');
+  const previewImg = document.getElementById('elderlyPhotoPreview');
   if(eid){
     const e = STATE.elderly[eid];
     document.getElementById('elderlyName').value = e.name || '';
+    document.getElementById('elderlyIdCard').value = e.idCard || '';
     document.getElementById('elderlyHn').value = e.hn || '';
     document.getElementById('elderlyAge').value = e.age || '';
     document.getElementById('elderlyGender').value = e.gender || 'ชาย';
-    document.getElementById('elderlyAdl').value = e.adlGroup || '1';
     document.getElementById('elderlyHouseNo').value = e.houseNo || '';
     document.getElementById('elderlyMoo').value = e.moo || '1';
+    document.getElementById('elderlyAdlScore').value = (e.adlScore !== undefined && e.adlScore !== null) ? e.adlScore : '';
+    document.getElementById('elderlyTai').value = e.tai || '';
+    document.getElementById('elderlyAdl').value = e.adlGroup || '1';
+    document.getElementById('elderlyHealthProblem').value = e.healthProblem || '';
+    document.getElementById('elderlyNeed').value = e.need || '';
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
     document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
+    if(e.photoUrl){ previewImg.src = e.photoUrl; previewWrap.style.display = 'block'; }
+    else { previewImg.src = ''; previewWrap.style.display = 'none'; }
   } else {
     document.getElementById('elderlyName').value = '';
+    document.getElementById('elderlyIdCard').value = '';
     document.getElementById('elderlyHn').value = '';
     document.getElementById('elderlyAge').value = '';
     document.getElementById('elderlyGender').value = 'ชาย';
-    document.getElementById('elderlyAdl').value = '1';
     document.getElementById('elderlyHouseNo').value = '';
     document.getElementById('elderlyMoo').value = '1';
+    document.getElementById('elderlyAdlScore').value = '';
+    document.getElementById('elderlyTai').value = '';
+    document.getElementById('elderlyAdl').value = '1';
+    document.getElementById('elderlyHealthProblem').value = '';
+    document.getElementById('elderlyNeed').value = '';
     document.getElementById('elderlyPdfMode').value = 'normal';
+    previewImg.src = ''; previewWrap.style.display = 'none';
   }
   document.getElementById('elderlyModal').classList.add('show');
 }
@@ -1679,31 +1763,53 @@ function openElderlyModal(eid){
 async function saveElderly(){
   const name = document.getElementById('elderlyName').value.trim();
   const cgCode = document.getElementById('elderlyCgCode').value;
+  const idCard = document.getElementById('elderlyIdCard').value.trim();
   if(!name){ showToast('กรุณาระบุชื่อผู้สูงอายุ','error'); return; }
+  if(idCard && !/^\d{13}$/.test(idCard)){ showToast('เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก','error'); return; }
   if(!cgCode){ showToast('กรุณาเลือก CG ผู้ดูแล','error'); return; }
   const editId = document.getElementById('elderlyEditId').value;
-  const data = {
-    name,
-    hn: document.getElementById('elderlyHn').value.trim(),
-    age: parseInt(document.getElementById('elderlyAge').value,10) || 0,
-    gender: document.getElementById('elderlyGender').value,
-    adlGroup: parseInt(document.getElementById('elderlyAdl').value,10),
-    houseNo: document.getElementById('elderlyHouseNo').value.trim(),
-    moo: document.getElementById('elderlyMoo').value,
-    cgCode,
-    pdfMode: document.getElementById('elderlyPdfMode').value,
-    status: 'active'
-  };
-  if(editId){
-    await elderlyRef.child(editId).update(data);
-    showToast('แก้ไขข้อมูลผู้สูงอายุเรียบร้อย','success');
-  } else {
-    const id = generateId('E', Object.keys(STATE.elderly||{}));
-    data.createdAt = Date.now();
-    await elderlyRef.child(id).set(data);
-    showToast('เพิ่มผู้สูงอายุเรียบร้อย','success');
+  const saveBtn = document.getElementById('elderlySaveBtn');
+  saveBtn.disabled = true;
+  try{
+    let photoUrl = (editId && STATE.elderly[editId]) ? (STATE.elderly[editId].photoUrl || '') : '';
+    if(elderlySelectedPhotoDataUrl){
+      photoUrl = await uploadToImgbb(elderlySelectedPhotoDataUrl);
+    }
+    const data = {
+      name,
+      idCard,
+      hn: document.getElementById('elderlyHn').value.trim(),
+      age: parseInt(document.getElementById('elderlyAge').value,10) || 0,
+      gender: document.getElementById('elderlyGender').value,
+      houseNo: document.getElementById('elderlyHouseNo').value.trim(),
+      moo: document.getElementById('elderlyMoo').value,
+      adlScore: document.getElementById('elderlyAdlScore').value === '' ? null : parseInt(document.getElementById('elderlyAdlScore').value,10),
+      tai: document.getElementById('elderlyTai').value,
+      adlGroup: parseInt(document.getElementById('elderlyAdl').value,10),
+      healthProblem: document.getElementById('elderlyHealthProblem').value.trim().slice(0,100),
+      need: document.getElementById('elderlyNeed').value.trim().slice(0,100),
+      photoUrl,
+      cgCode,
+      pdfMode: document.getElementById('elderlyPdfMode').value,
+      status: 'active'
+    };
+    if(editId){
+      await elderlyRef.child(editId).update(data);
+      showToast('แก้ไขข้อมูลผู้สูงอายุเรียบร้อย','success');
+    } else {
+      const id = generateId('E', Object.keys(STATE.elderly||{}));
+      data.createdAt = Date.now();
+      await elderlyRef.child(id).set(data);
+      showToast('เพิ่มผู้สูงอายุเรียบร้อย','success');
+    }
+    elderlySelectedPhotoDataUrl = null;
+    document.getElementById('elderlyModal').classList.remove('show');
+  } catch(err){
+    console.error(err);
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+  } finally {
+    saveBtn.disabled = false;
   }
-  document.getElementById('elderlyModal').classList.remove('show');
 }
 
 async function deleteElderly(eid){
