@@ -647,6 +647,18 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
   </div>
 </div>
 
+<!-- Elderly Detail View Modal -->
+<div class="modal-overlay" id="elderlyDetailModal">
+  <div class="modal-box" style="max-width:480px;">
+    <h3>รายละเอียดผู้สูงอายุ</h3>
+    <div id="elderlyDetailBody" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="elderlyDetailCloseBtn">ปิด</button>
+      <button class="btn btn-primary" id="elderlyDetailEditBtn">✏ แก้ไขข้อมูล</button>
+    </div>
+  </div>
+</div>
+
 <!-- Calendar Modal -->
 <div class="modal-overlay" id="calendarModal">
   <div class="modal-box" style="max-width:400px;">
@@ -1679,7 +1691,7 @@ function renderElderlyTable(){
     const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : e.cgCode;
     return `<tr>
       <td>${id}</td>
-      <td>${escapeHtml(e.name)}</td>
+      <td><a href="javascript:void(0)" class="elderly-name-link" data-view-e="${id}" style="color:var(--secondary);font-weight:600;text-decoration:underline;cursor:pointer;">${escapeHtml(e.name)}</a></td>
       <td>${e.age||'-'}</td>
       <td>${escapeHtml(e.gender||'-')}</td>
       <td>${escapeHtml(e.moo||'-')}</td>
@@ -1696,6 +1708,7 @@ function renderElderlyTable(){
   }).join('');
   tbody.querySelectorAll('[data-edit-e]').forEach(btn=>btn.addEventListener('click', ()=>openElderlyModal(btn.dataset.editE)));
   tbody.querySelectorAll('[data-del-e]').forEach(btn=>btn.addEventListener('click', ()=>deleteElderly(btn.dataset.delE)));
+  tbody.querySelectorAll('[data-view-e]').forEach(el=>el.addEventListener('click', ()=>openElderlyDetailModal(el.dataset.viewE)));
 }
 
 function bindElderlyTabEvents(){
@@ -1712,6 +1725,44 @@ function bindElderlyTabEvents(){
     document.getElementById('elderlyPhotoPreview').src = elderlySelectedPhotoDataUrl;
     previewWrap.style.display = 'block';
   });
+  document.getElementById('elderlyDetailCloseBtn').addEventListener('click', ()=>document.getElementById('elderlyDetailModal').classList.remove('show'));
+  document.getElementById('elderlyDetailEditBtn').addEventListener('click', ()=>{
+    const eid = document.getElementById('elderlyDetailModal').dataset.currentEid;
+    document.getElementById('elderlyDetailModal').classList.remove('show');
+    openElderlyModal(eid);
+  });
+}
+
+function openElderlyDetailModal(eid){
+  const e = STATE.elderly[eid];
+  if(!e) return;
+  document.getElementById('elderlyDetailModal').dataset.currentEid = eid;
+  const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : (e.cgCode || '-');
+  const row = (label, value) => `
+    <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+      <span style="color:var(--muted);font-size:0.82rem;">${label}</span>
+      <span style="font-weight:600;text-align:right;">${value}</span>
+    </div>`;
+  const body = document.getElementById('elderlyDetailBody');
+  body.innerHTML = `
+    ${e.photoUrl ? `<img src="${e.photoUrl}" style="width:100%;aspect-ratio:1200/675;object-fit:cover;border-radius:10px;border:1px solid var(--border);">` : ''}
+    ${row('รหัส', eid)}
+    ${row('ชื่อ-สกุล', escapeHtml(e.name||'-'))}
+    ${row('เลขบัตรประชาชน', escapeHtml(e.idCard||'-'))}
+    ${row('HN', escapeHtml(e.hn||'-'))}
+    ${row('อายุ', (e.age||'-') + ' ปี')}
+    ${row('เพศ', escapeHtml(e.gender||'-'))}
+    ${row('บ้านเลขที่', escapeHtml(e.houseNo||'-'))}
+    ${row('หมู่ที่', escapeHtml(e.moo||'-'))}
+    ${row('คะแนน ADL', (e.adlScore !== undefined && e.adlScore !== null && e.adlScore !== '') ? e.adlScore : '-')}
+    ${row('TAI', escapeHtml(e.tai||'-'))}
+    ${row('กลุ่ม ADL', e.adlGroup||'-')}
+    ${row('ปัญหาสุขภาพ', escapeHtml(e.healthProblem||'-'))}
+    ${row('ความต้องการ', escapeHtml(e.need||'-'))}
+    ${row('CG ผู้ดูแล', escapeHtml(cgName))}
+    ${row('โหมด PDF', e.pdfMode==='obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)')}
+  `;
+  document.getElementById('elderlyDetailModal').classList.add('show');
 }
 
 function openElderlyModal(eid){
