@@ -576,12 +576,27 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
   <div class="modal-box">
     <h3 id="cgModalTitle">เพิ่ม CG</h3>
     <input type="hidden" id="cgEditId">
-    <div class="field"><label>ชื่อ-สกุล *</label><input type="text" id="cgName"></div>
-    <div class="field"><label>เบอร์โทร</label><input type="tel" id="cgPhone"></div>
+    <div class="row">
+      <div class="field"><label>เลขบัตรประชาชน</label><input type="text" id="cgIdCard" maxlength="13" inputmode="numeric" placeholder="13 หลัก"></div>
+      <div class="field"><label>ชื่อ-สกุล *</label><input type="text" id="cgName"></div>
+    </div>
+    <div class="field"><label>เบอร์โทรติดต่อ</label><input type="tel" id="cgPhone"></div>
     <div class="row">
       <div class="field"><label>บ้านเลขที่</label><input type="text" id="cgHouseNo"></div>
       <div class="field"><label>หมู่ที่</label>
         <select id="cgMoo"><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="5">5</option><option value="12">12</option><option value="18">18</option><option value="20">20</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>ชั่วโมงการอบรม</label><input type="number" id="cgTrainingHours" min="0" placeholder="ชั่วโมง"></div>
+      <div class="field"><label>อบรมครั้งสุดท้าย</label><input type="date" id="cgLastTraining"></div>
+    </div>
+    <div class="field"><label>อบรมพื้นฟูครั้งถัดไป</label><input type="date" id="cgNextTraining"></div>
+    <div class="field">
+      <label>ภาพ CG (ขนาด 600 x 900 px)</label>
+      <input type="file" id="cgPhotoInput" accept="image/*">
+      <div id="cgPhotoPreviewWrap" style="margin-top:8px;display:none;">
+        <img id="cgPhotoPreview" src="" style="width:160px;aspect-ratio:600/900;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block;">
       </div>
     </div>
     <div class="modal-actions">
@@ -655,6 +670,18 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div class="modal-actions">
       <button class="btn btn-outline" id="elderlyDetailCloseBtn">ปิด</button>
       <button class="btn btn-primary" id="elderlyDetailEditBtn">✏ แก้ไขข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<!-- CG Detail View Modal -->
+<div class="modal-overlay" id="cgDetailModal">
+  <div class="modal-box" style="max-width:480px;">
+    <h3>รายละเอียด CG</h3>
+    <div id="cgDetailBody" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cgDetailCloseBtn">ปิด</button>
+      <button class="btn btn-primary" id="cgDetailEditBtn">✏ แก้ไขข้อมูล</button>
     </div>
   </div>
 </div>
@@ -1382,6 +1409,7 @@ document.getElementById('peSaveBtn').addEventListener('click', async ()=>{
 let recSelectedDates = [];
 let recSelectedPhotos = []; // {file, dataUrl}
 let elderlySelectedPhotoDataUrl = null; // pending new/updated elderly profile photo
+let cgSelectedPhotoDataUrl = null; // pending new/updated CG photo
 
 function populateElderlySelectsForRecordTab(){
   const cgSel = document.getElementById('recCg');
@@ -1587,7 +1615,7 @@ function renderCgTable(){
     const elderlyCount = Object.keys(STATE.elderly||{}).filter(eid=>STATE.elderly[eid].cgCode===id).length;
     return `<tr>
       <td>${id}</td>
-      <td>${escapeHtml(cg.name)}</td>
+      <td><a href="javascript:void(0)" class="cg-name-link" data-view-cg="${id}" style="color:var(--secondary);font-weight:600;text-decoration:underline;cursor:pointer;">${escapeHtml(cg.name)}</a></td>
       <td>${escapeHtml(cg.phone||'-')}</td>
       <td>${escapeHtml(cg.moo||'-')}</td>
       <td>${elderlyCount}</td>
@@ -1600,12 +1628,55 @@ function renderCgTable(){
   }).join('');
   tbody.querySelectorAll('[data-edit-cg]').forEach(btn=>btn.addEventListener('click', ()=>openCgModal(btn.dataset.editCg)));
   tbody.querySelectorAll('[data-del-cg]').forEach(btn=>btn.addEventListener('click', ()=>deleteCg(btn.dataset.delCg)));
+  tbody.querySelectorAll('[data-view-cg]').forEach(el=>el.addEventListener('click', ()=>openCgDetailModal(el.dataset.viewCg)));
 }
 
 function bindCgTabEvents(){
   document.getElementById('addCgBtn').addEventListener('click', ()=>openCgModal(null));
   document.getElementById('cgCancelBtn').addEventListener('click', ()=>document.getElementById('cgModal').classList.remove('show'));
   document.getElementById('cgSaveBtn').addEventListener('click', saveCg);
+  document.getElementById('cgPhotoInput').addEventListener('change', async (ev)=>{
+    const file = ev.target.files && ev.target.files[0];
+    if(!file) return;
+    cgSelectedPhotoDataUrl = await resizeImageFileCover(file, 600, 900);
+    const previewWrap = document.getElementById('cgPhotoPreviewWrap');
+    document.getElementById('cgPhotoPreview').src = cgSelectedPhotoDataUrl;
+    previewWrap.style.display = 'block';
+  });
+  document.getElementById('cgDetailCloseBtn').addEventListener('click', ()=>document.getElementById('cgDetailModal').classList.remove('show'));
+  document.getElementById('cgDetailEditBtn').addEventListener('click', ()=>{
+    const cgId = document.getElementById('cgDetailModal').dataset.currentCgId;
+    document.getElementById('cgDetailModal').classList.remove('show');
+    openCgModal(cgId);
+  });
+}
+
+function openCgDetailModal(cgId){
+  const cg = STATE.cgs[cgId];
+  if(!cg) return;
+  document.getElementById('cgDetailModal').dataset.currentCgId = cgId;
+  const elderlyCount = Object.keys(STATE.elderly||{}).filter(eid=>STATE.elderly[eid].cgCode===cgId).length;
+  const row = (label, value) => `
+    <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+      <span style="color:var(--muted);font-size:0.82rem;">${label}</span>
+      <span style="font-weight:600;text-align:right;">${value}</span>
+    </div>`;
+  const body = document.getElementById('cgDetailBody');
+  body.innerHTML = `
+    ${cg.photoUrl ? `<div style="width:160px;aspect-ratio:600/900;border-radius:10px;border:1px solid var(--border);background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto;"><img src="${cg.photoUrl}" style="max-width:100%;max-height:100%;object-fit:contain;"></div>` : ''}
+    ${row('รหัส', cgId)}
+    ${row('เลขบัตรประชาชน', escapeHtml(cg.idCard||'-'))}
+    ${row('ชื่อ-สกุล', escapeHtml(cg.name||'-'))}
+    ${row('เบอร์โทรติดต่อ', escapeHtml(cg.phone||'-'))}
+    ${row('บ้านเลขที่', escapeHtml(cg.houseNo||'-'))}
+    ${row('หมู่ที่', escapeHtml(cg.moo||'-'))}
+    ${row('ชั่วโมงการอบรม', (cg.trainingHours !== undefined && cg.trainingHours !== null && cg.trainingHours !== '') ? cg.trainingHours : '-')}
+    ${row('อบรมครั้งสุดท้าย', cg.lastTraining ? formatThaiDateShort(cg.lastTraining) : '-')}
+    ${row('อบรมพื้นฟูครั้งถัดไป', cg.nextTraining ? formatThaiDateShort(cg.nextTraining) : '-')}
+    ${row('จำนวนผู้สูงอายุที่ดูแล', elderlyCount)}
+    ${row('สถานะ', cg.status==='active' ? 'ใช้งาน' : 'ปิดใช้งาน')}
+  `;
+  document.getElementById('cgDetailModal').classList.add('show');
 }
 
 function isCgManageAllowed(){
@@ -1620,17 +1691,32 @@ function openCgModal(cgId){
   if(!isCgManageAllowed()) return;
   document.getElementById('cgEditId').value = cgId || '';
   document.getElementById('cgModalTitle').textContent = cgId ? 'แก้ไขข้อมูล CG' : 'เพิ่ม CG';
+  cgSelectedPhotoDataUrl = null;
+  document.getElementById('cgPhotoInput').value = '';
+  const previewWrap = document.getElementById('cgPhotoPreviewWrap');
+  const previewImg = document.getElementById('cgPhotoPreview');
   if(cgId){
     const cg = STATE.cgs[cgId];
+    document.getElementById('cgIdCard').value = cg.idCard || '';
     document.getElementById('cgName').value = cg.name || '';
     document.getElementById('cgPhone').value = cg.phone || '';
     document.getElementById('cgHouseNo').value = cg.houseNo || '';
     document.getElementById('cgMoo').value = cg.moo || '1';
+    document.getElementById('cgTrainingHours').value = (cg.trainingHours !== undefined && cg.trainingHours !== null) ? cg.trainingHours : '';
+    document.getElementById('cgLastTraining').value = cg.lastTraining || '';
+    document.getElementById('cgNextTraining').value = cg.nextTraining || '';
+    if(cg.photoUrl){ previewImg.src = cg.photoUrl; previewWrap.style.display = 'block'; }
+    else { previewImg.src = ''; previewWrap.style.display = 'none'; }
   } else {
+    document.getElementById('cgIdCard').value = '';
     document.getElementById('cgName').value = '';
     document.getElementById('cgPhone').value = '';
     document.getElementById('cgHouseNo').value = '';
     document.getElementById('cgMoo').value = '1';
+    document.getElementById('cgTrainingHours').value = '';
+    document.getElementById('cgLastTraining').value = '';
+    document.getElementById('cgNextTraining').value = '';
+    previewImg.src = ''; previewWrap.style.display = 'none';
   }
   document.getElementById('cgModal').classList.add('show');
 }
@@ -1639,24 +1725,45 @@ async function saveCg(){
   if(!isCgManageAllowed()) return;
   const name = document.getElementById('cgName').value.trim();
   if(!name){ showToast('กรุณาระบุชื่อ CG','error'); return; }
+  const idCard = document.getElementById('cgIdCard').value.trim();
+  if(idCard && !/^\d{13}$/.test(idCard)){ showToast('เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก','error'); return; }
   const editId = document.getElementById('cgEditId').value;
-  const data = {
-    name,
-    phone: document.getElementById('cgPhone').value.trim(),
-    houseNo: document.getElementById('cgHouseNo').value.trim(),
-    moo: document.getElementById('cgMoo').value,
-    status: 'active'
-  };
-  if(editId){
-    await cgsRef.child(editId).update(data);
-    showToast('แก้ไขข้อมูล CG เรียบร้อย','success');
-  } else {
-    const id = generateId('CG', Object.keys(STATE.cgs||{}));
-    data.createdAt = Date.now();
-    await cgsRef.child(id).set(data);
-    showToast('เพิ่ม CG เรียบร้อย','success');
+  const saveBtn = document.getElementById('cgSaveBtn');
+  saveBtn.disabled = true;
+  try{
+    let photoUrl = (editId && STATE.cgs[editId]) ? (STATE.cgs[editId].photoUrl || '') : '';
+    if(cgSelectedPhotoDataUrl){
+      photoUrl = await uploadToImgbb(cgSelectedPhotoDataUrl);
+    }
+    const data = {
+      idCard,
+      name,
+      phone: document.getElementById('cgPhone').value.trim(),
+      houseNo: document.getElementById('cgHouseNo').value.trim(),
+      moo: document.getElementById('cgMoo').value,
+      trainingHours: document.getElementById('cgTrainingHours').value === '' ? null : parseFloat(document.getElementById('cgTrainingHours').value),
+      lastTraining: document.getElementById('cgLastTraining').value,
+      nextTraining: document.getElementById('cgNextTraining').value,
+      photoUrl,
+      status: 'active'
+    };
+    if(editId){
+      await cgsRef.child(editId).update(data);
+      showToast('แก้ไขข้อมูล CG เรียบร้อย','success');
+    } else {
+      const id = generateId('CG', Object.keys(STATE.cgs||{}));
+      data.createdAt = Date.now();
+      await cgsRef.child(id).set(data);
+      showToast('เพิ่ม CG เรียบร้อย','success');
+    }
+    cgSelectedPhotoDataUrl = null;
+    document.getElementById('cgModal').classList.remove('show');
+  } catch(err){
+    console.error(err);
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+  } finally {
+    saveBtn.disabled = false;
   }
-  document.getElementById('cgModal').classList.remove('show');
 }
 
 async function deleteCg(cgId){
