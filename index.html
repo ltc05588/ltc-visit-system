@@ -17,6 +17,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+<!-- Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
 :root{
   --primary:#1D9E75;
@@ -536,7 +539,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div class="card">
       <div class="section-actions">
         <h2 style="margin:0;">👴 จัดการผู้สูงอายุ</h2>
-        <button class="btn btn-primary" id="addElderlyBtn">+ เพิ่มผู้สูงอายุ</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-outline" id="exportElderlyBtn">⬇ ดาวน์โหลด Excel</button>
+          <button class="btn btn-primary" id="addElderlyBtn">+ เพิ่มผู้สูงอายุ</button>
+        </div>
       </div>
       <div class="filter-bar">
         <div class="field">
@@ -588,7 +594,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div class="card">
       <h2>🔐 จัดการบัญชีผู้ใช้และสิทธิ์</h2>
       <p style="font-size:0.82rem;color:var(--muted);margin-top:-4px;">
-        ผู้ที่สมัครสมาชิกใหม่จะได้สิทธิ์ "User" โดยอัตโนมัติ แต่จะมีสถานะ "รออนุมัติ" และไม่สามารถเข้าใช้งานระบบได้จนกว่าเจ้าของระบบ (Owner) จะกดอนุมัติ เจ้าของระบบสามารถเลื่อนสิทธิ์เป็น Admin หรือปรับลดสิทธิ์ได้ที่นี่ด้วย
+        ผู้ที่สมัครสมาชิกใหม่จะได้สิทธิ์ "User" โดยอัตโนมัติ แต่จะมีสถานะ "รออนุมัติ" และไม่สามารถเข้าใช้งานระบบได้จนกว่าเจ้าของระบบ (Owner) จะกดอนุมัติ หากกด "ไม่อนุมัติ" ผู้ใช้จะถูกปฏิเสธและไม่สามารถเข้าใช้งานได้ (แต่ Owner สามารถกดอนุมัติย้อนหลังได้เช่นกัน) เจ้าของระบบสามารถเลื่อนสิทธิ์เป็น Admin หรือปรับลดสิทธิ์ได้ที่นี่ด้วย
       </p>
       <div class="table-wrap">
         <table id="usersTable"><thead><tr>
@@ -984,7 +990,7 @@ auth.onAuthStateChanged(async (fbUser)=>{
   const profile = snap.val();
   // profiles created before the approval feature existed have no status field - treat them as already approved
   const status = profile.status || 'approved';
-  if(status === 'pending'){
+  if(status === 'pending' || status === 'rejected'){
     await auth.signOut();
     CURRENT_USER = null;
     document.getElementById('guestBadge').style.display = 'flex';
@@ -992,7 +998,9 @@ auth.onAuthStateChanged(async (fbUser)=>{
     document.getElementById('usersTabBtn').style.display = 'none';
     goToDashboardTab();
     openAuthOverlay();
-    document.getElementById('loginError').textContent = 'บัญชีของคุณยังรออนุมัติจากเจ้าของระบบ (Owner) กรุณาลองเข้าสู่ระบบใหม่อีกครั้งภายหลัง';
+    document.getElementById('loginError').textContent = status === 'rejected'
+      ? 'บัญชีของคุณไม่ได้รับการอนุมัติจากเจ้าของระบบ (Owner) กรุณาติดต่อผู้ดูแลระบบ'
+      : 'บัญชีของคุณยังรออนุมัติจากเจ้าของระบบ (Owner) กรุณาลองเข้าสู่ระบบใหม่อีกครั้งภายหลัง';
     return;
   }
   CURRENT_USER = { uid: fbUser.uid, email: fbUser.email, name: profile.name || fbUser.email, role: profile.role || 'user' };
@@ -1037,6 +1045,15 @@ function bindUsersTabEvents(){
       showToast('อนุมัติผู้ใช้เรียบร้อย','success');
       return;
     }
+    const rejectBtn = e.target.closest('[data-reject-user]');
+    if(rejectBtn){
+      const uid = rejectBtn.dataset.rejectUser;
+      const ok = await showConfirm('ต้องการไม่อนุมัติผู้ใช้นี้ใช่หรือไม่? ผู้ใช้จะไม่สามารถเข้าใช้งานระบบได้', 'ยืนยันการไม่อนุมัติ');
+      if(!ok) return;
+      await usersRef.child(uid).update({ status:'rejected' });
+      showToast('ไม่อนุมัติผู้ใช้เรียบร้อย','success');
+      return;
+    }
     const btn = e.target.closest('[data-del-user]');
     if(!btn) return;
     const uid = btn.dataset.delUser;
@@ -1061,9 +1078,14 @@ function renderUsersTable(){
     const status = u.status || 'approved';
     const statusBadge = status === 'pending'
       ? `<span class="badge orange">รออนุมัติ</span>`
+      : status === 'rejected'
+      ? `<span class="badge gray">ไม่อนุมัติ</span>`
       : `<span class="badge green">อนุมัติแล้ว</span>`;
-    const approveBtn = status === 'pending'
+    const approveBtn = (status === 'pending' || status === 'rejected')
       ? `<button class="btn btn-primary btn-sm" data-approve-user="${uid}">อนุมัติ</button>`
+      : '';
+    const rejectBtn = status === 'pending'
+      ? `<button class="btn btn-danger btn-sm" data-reject-user="${uid}">ไม่อนุมัติ</button>`
       : '';
     return `<tr>
       <td>${escapeHtml(u.name)}</td>
@@ -1077,7 +1099,7 @@ function renderUsersTable(){
         </select>
       </td>
       <td>${created}</td>
-      <td style="display:flex;gap:6px;">${approveBtn}<button class="btn btn-danger btn-sm" data-del-user="${uid}">ลบ</button></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">${approveBtn}${rejectBtn}<button class="btn btn-danger btn-sm" data-del-user="${uid}">ลบ</button></td>
     </tr>`;
   }).join('');
 }
@@ -2072,8 +2094,67 @@ function renderElderlyTable(){
   tbody.querySelectorAll('[data-view-e]').forEach(el=>el.addEventListener('click', ()=>openElderlyDetailModal(el.dataset.viewE)));
 }
 
+function exportElderlyToExcel(){
+  const cgFilter = document.getElementById('filterElderlyCg').value;
+  const modeFilter = document.getElementById('filterElderlyMode').value;
+  let ids = Object.keys(STATE.elderly || {}).sort();
+  if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(modeFilter) ids = ids.filter(id=>STATE.elderly[id].pdfMode === modeFilter);
+
+  if(ids.length === 0){
+    showToast('ไม่พบข้อมูลผู้สูงอายุสำหรับส่งออก','error');
+    return;
+  }
+
+  const header = [
+    'รหัส','ชื่อ-สกุล','เลขบัตรประชาชน','HN','อายุ','เพศ','บ้านเลขที่','หมู่ที่',
+    'คะแนน ADL','TAI','กลุ่ม ADL','ความพิการ','ปัญหาสุขภาพ','ความต้องการ',
+    'CG ผู้ดูแล','โหมด PDF','สถานะ'
+  ];
+
+  const rows = ids.map(id=>{
+    const e = STATE.elderly[id];
+    const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : (e.cgCode || '-');
+    return [
+      id,
+      e.name || '',
+      e.idCard || '',
+      e.hn || '',
+      e.age || '',
+      e.gender || '',
+      e.houseNo || '',
+      e.moo || '',
+      (e.adlScore !== undefined && e.adlScore !== null && e.adlScore !== '') ? e.adlScore : '',
+      e.tai || '',
+      e.adlGroup || '',
+      e.disability || '',
+      e.healthProblem || '',
+      e.need || '',
+      cgName,
+      e.pdfMode === 'obt' ? 'อบต.' : 'ปกติ',
+      e.status === 'active' ? 'ใช้งาน' : (e.status || '-')
+    ];
+  });
+
+  const wsData = [header, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [
+    {wch:8},{wch:24},{wch:16},{wch:12},{wch:6},{wch:8},{wch:10},{wch:8},
+    {wch:10},{wch:8},{wch:10},{wch:24},{wch:24},{wch:24},{wch:20},{wch:10},{wch:10}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'ผู้สูงอายุ');
+
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `ข้อมูลผู้สูงอายุ_${dateStr}.xlsx`);
+  showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อย','success');
+}
+
 function bindElderlyTabEvents(){
   document.getElementById('addElderlyBtn').addEventListener('click', ()=>openElderlyModal(null));
+  document.getElementById('exportElderlyBtn').addEventListener('click', exportElderlyToExcel);
   document.getElementById('elderlyCancelBtn').addEventListener('click', ()=>document.getElementById('elderlyModal').classList.remove('show'));
   document.getElementById('elderlySaveBtn').addEventListener('click', saveElderly);
   document.getElementById('filterElderlyCg').addEventListener('change', renderElderlyTable);
