@@ -140,6 +140,13 @@ a{color:var(--secondary);}
 .stat-box.blue .num{color:var(--secondary);}
 .stat-box.orange{background:var(--danger-light);}
 .stat-box.orange .num{color:var(--danger);}
+.stat-box.red{background:#fbe4e2;}
+.stat-box.red .num{color:#c0392b;}
+.stat-box.yellow{background:#fff6e0;}
+.stat-box.yellow .num{color:#c98a1a;}
+.stat-box.gray{background:#eef1f0;}
+.stat-box.gray .num{color:var(--muted);}
+.stat-box .sub{font-size:0.68rem;color:var(--muted);margin-top:1px;}
 
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 label{font-size:0.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;}
@@ -386,6 +393,36 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 
   <!-- TAB 1: DASHBOARD -->
   <div class="tab-panel active" id="tab-dashboard">
+
+    <!-- ================= สรุปข้อมูลผู้สูงอายุ (ภาพรวม) ================= -->
+    <div class="card">
+      <h2>🧓 สรุปข้อมูลผู้สูงอายุ</h2>
+
+      <h3>1. ภาพรวมตามคะแนน ADL (ระดับภาวะพึ่งพิง)</h3>
+      <div class="grid-cards" id="adlScoreGroupBox" style="margin-bottom:18px;"></div>
+
+      <h3>2. ภาพรวมตามกลุ่ม ADL</h3>
+      <div class="grid-cards" id="adlGroupBox" style="margin-bottom:18px;"></div>
+
+      <h3>3. ภาพรวมตาม TAI</h3>
+      <div class="grid-cards" id="taiGroupBox" style="margin-bottom:18px;"></div>
+
+      <h3>4. สรุปภาพรวมปัญหาสุขภาพ</h3>
+      <div class="table-wrap" style="margin-bottom:18px;">
+        <table id="healthProblemTable"><thead><tr>
+          <th>ปัญหาสุขภาพ</th><th>จำนวน (คน)</th><th>สัดส่วน</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+
+      <h3>5. สรุปภาพรวมความต้องการ</h3>
+      <div class="table-wrap">
+        <table id="needTable"><thead><tr>
+          <th>ความต้องการ</th><th>จำนวน (คน)</th><th>สัดส่วน</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+    <!-- ================= END สรุปข้อมูลผู้สูงอายุ ================= -->
+
     <div class="card">
       <div class="filter-bar">
         <div class="field">
@@ -1227,7 +1264,140 @@ window.addEventListener('DOMContentLoaded', ()=>{
 /* =========================================================
    ===================  DASHBOARD TAB  ======================
 ========================================================= */
+/* =========================================================
+   ============  สรุปข้อมูลผู้สูงอายุ (ELDERLY SUMMARY)  ============
+========================================================= */
+function classifyAdlScore(score){
+  if(score === null || score === undefined || score === '' || isNaN(score)){
+    return 'none';
+  }
+  if(score >= 0 && score <= 4) return 'red';
+  if(score >= 5 && score <= 8) return 'orange';
+  if(score >= 9 && score <= 11) return 'yellow';
+  return 'normal'; // 12 ขึ้นไป
+}
+
+function buildTextCountRows(elderlyIds, field, totalCount){
+  const counts = {};
+  let emptyCount = 0;
+  elderlyIds.forEach(id=>{
+    const raw = (STATE.elderly[id][field] || '').trim();
+    if(!raw){ emptyCount++; return; }
+    counts[raw] = (counts[raw] || 0) + 1;
+  });
+  const rows = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
+  let html = rows.map(([text,count])=>{
+    const pct = totalCount ? Math.round(count/totalCount*100) : 0;
+    return `<tr><td>${escapeHtml(text)}</td><td>${count}</td><td>${pct}%</td></tr>`;
+  }).join('');
+  if(emptyCount > 0){
+    const pct = totalCount ? Math.round(emptyCount/totalCount*100) : 0;
+    html += `<tr><td><span class="badge gray">ไม่ระบุ</span></td><td>${emptyCount}</td><td>${pct}%</td></tr>`;
+  }
+  if(!html){
+    html = `<tr><td colspan="3" class="empty-state">ยังไม่มีข้อมูล</td></tr>`;
+  }
+  return html;
+}
+
+function renderElderlySummary(){
+  const elderlyIds = Object.keys(STATE.elderly || {});
+  const total = elderlyIds.length;
+
+  /* ---------- 1. ภาพรวมตามคะแนน ADL (กลุ่มความเสี่ยง) ---------- */
+  const scoreGroups = { red:0, orange:0, yellow:0, normal:0, none:0 };
+  elderlyIds.forEach(id=>{
+    const s = STATE.elderly[id].adlScore;
+    scoreGroups[classifyAdlScore(s)]++;
+  });
+  const adlScoreBox = document.getElementById('adlScoreGroupBox');
+  if(adlScoreBox){
+    adlScoreBox.innerHTML = `
+      <div class="stat-box red">
+        <div class="num">${scoreGroups.red}</div>
+        <div class="lbl">คะแนน ADL 0-4</div>
+        <div class="sub">ภาวะพึ่งพาโดยสมบูรณ์ (Total dependence)</div>
+      </div>
+      <div class="stat-box orange">
+        <div class="num">${scoreGroups.orange}</div>
+        <div class="lbl">คะแนน ADL 5-8</div>
+        <div class="sub">ภาวะพึ่งพารุนแรง (Severe dependence)</div>
+      </div>
+      <div class="stat-box yellow">
+        <div class="num">${scoreGroups.yellow}</div>
+        <div class="lbl">คะแนน ADL 9-11</div>
+        <div class="sub">ภาวะพึ่งพาปานกลาง (Moderately severe dependence)</div>
+      </div>
+      <div class="stat-box">
+        <div class="num">${scoreGroups.normal}</div>
+        <div class="lbl">คะแนน ADL 12 ขึ้นไป</div>
+        <div class="sub">ภาวะพึ่งพาน้อย/ปกติ</div>
+      </div>
+      <div class="stat-box gray">
+        <div class="num">${scoreGroups.none}</div>
+        <div class="lbl">ไม่มีข้อมูลคะแนน</div>
+      </div>
+    `;
+  }
+
+  /* ---------- 2. ภาพรวมตามกลุ่ม ADL ---------- */
+  const adlGroupCounts = {1:0,2:0,3:0,4:0};
+  elderlyIds.forEach(id=>{
+    const g = STATE.elderly[id].adlGroup;
+    if(adlGroupCounts[g] !== undefined) adlGroupCounts[g]++;
+  });
+  const adlGroupBox = document.getElementById('adlGroupBox');
+  if(adlGroupBox){
+    const boxClasses = ['','blue','orange','red'];
+    adlGroupBox.innerHTML = [1,2,3,4].map(g=>{
+      const pct = total ? Math.round(adlGroupCounts[g]/total*100) : 0;
+      return `<div class="stat-box ${boxClasses[g-1]}">
+        <div class="num">${adlGroupCounts[g]}</div>
+        <div class="lbl">กลุ่ม ADL ${g}</div>
+        <div class="sub">${pct}% ของทั้งหมด</div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ---------- 3. ภาพรวมตาม TAI ---------- */
+  const taiCodes = ['B3','B4','C2','C3','C4','I1','I2','I3','I4'];
+  const taiCounts = {};
+  taiCodes.forEach(c=> taiCounts[c] = 0);
+  let taiNone = 0;
+  elderlyIds.forEach(id=>{
+    const t = STATE.elderly[id].tai;
+    if(t && taiCounts[t] !== undefined) taiCounts[t]++;
+    else taiNone++;
+  });
+  const taiBox = document.getElementById('taiGroupBox');
+  if(taiBox){
+    taiBox.innerHTML = taiCodes.map(c=>{
+      const pct = total ? Math.round(taiCounts[c]/total*100) : 0;
+      return `<div class="stat-box blue">
+        <div class="num">${taiCounts[c]}</div>
+        <div class="lbl">TAI ${c}</div>
+        <div class="sub">${pct}% ของทั้งหมด</div>
+      </div>`;
+    }).join('') + `
+      <div class="stat-box gray">
+        <div class="num">${taiNone}</div>
+        <div class="lbl">ไม่ระบุ TAI</div>
+      </div>
+    `;
+  }
+
+  /* ---------- 4. สรุปภาพรวมปัญหาสุขภาพ ---------- */
+  const healthTbody = document.querySelector('#healthProblemTable tbody');
+  if(healthTbody) healthTbody.innerHTML = buildTextCountRows(elderlyIds, 'healthProblem', total);
+
+  /* ---------- 5. สรุปภาพรวมความต้องการ ---------- */
+  const needTbody = document.querySelector('#needTable tbody');
+  if(needTbody) needTbody.innerHTML = buildTextCountRows(elderlyIds, 'need', total);
+}
+
 function renderDashboard(){
+  renderElderlySummary();
+
   const be = parseInt(document.getElementById('dashYear').value, 10);
   const m = parseInt(document.getElementById('dashMonth').value, 10);
   const gy = ceYear(be);
