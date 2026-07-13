@@ -407,14 +407,17 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       <h3>3. ภาพรวมตาม TAI</h3>
       <div class="grid-cards" id="taiGroupBox" style="margin-bottom:18px;"></div>
 
-      <h3>4. สรุปภาพรวมปัญหาสุขภาพ</h3>
+      <h3>4. สรุปภาพรวมความพิการ</h3>
+      <div class="grid-cards" id="disabilityGroupBox" style="margin-bottom:18px;"></div>
+
+      <h3>5. สรุปภาพรวมปัญหาสุขภาพ</h3>
       <div class="table-wrap" style="margin-bottom:18px;">
         <table id="healthProblemTable"><thead><tr>
           <th>ปัญหาสุขภาพ</th><th>จำนวน (คน)</th><th>สัดส่วน</th>
         </tr></thead><tbody></tbody></table>
       </div>
 
-      <h3>5. สรุปภาพรวมความต้องการ</h3>
+      <h3>6. สรุปภาพรวมความต้องการ</h3>
       <div class="table-wrap">
         <table id="needTable"><thead><tr>
           <th>ความต้องการ</th><th>จำนวน (คน)</th><th>สัดส่วน</th>
@@ -678,6 +681,16 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
     <div class="field"><label>กลุ่ม ADL</label>
       <select id="elderlyAdl"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+    </div>
+    <div class="field"><label>ความพิการ</label>
+      <select id="elderlyDisability">
+        <option value="ไม่พิการ">ไม่พิการ</option>
+        <option value="ความพิการทางการเห็น">ความพิการทางการเห็น</option>
+        <option value="ความพิการทางการได้ยินหรือสื่อความหมาย">ความพิการทางการได้ยินหรือสื่อความหมาย</option>
+        <option value="ความพิการทางการเคลื่อนไหวหรือทางร่างกาย">ความพิการทางการเคลื่อนไหวหรือทางร่างกาย</option>
+        <option value="ความพิการทางจิตใจหรือพฤติกรรม">ความพิการทางจิตใจหรือพฤติกรรม</option>
+        <option value="ความพิการทางสติปัญญา">ความพิการทางสติปัญญา</option>
+      </select>
     </div>
     <div class="field"><label>ปัญหาสุขภาพ</label><textarea id="elderlyHealthProblem" maxlength="100" placeholder="ไม่เกิน 100 ตัวอักษร"></textarea></div>
     <div class="field"><label>ความต้องการ</label><textarea id="elderlyNeed" maxlength="100" placeholder="ไม่เกิน 100 ตัวอักษร"></textarea></div>
@@ -1386,11 +1399,47 @@ function renderElderlySummary(){
     `;
   }
 
-  /* ---------- 4. สรุปภาพรวมปัญหาสุขภาพ ---------- */
+  /* ---------- 4. สรุปภาพรวมความพิการ ---------- */
+  const disabilityTypes = [
+    'ไม่พิการ',
+    'ความพิการทางการเห็น',
+    'ความพิการทางการได้ยินหรือสื่อความหมาย',
+    'ความพิการทางการเคลื่อนไหวหรือทางร่างกาย',
+    'ความพิการทางจิตใจหรือพฤติกรรม',
+    'ความพิการทางสติปัญญา'
+  ];
+  const disabilityCounts = {};
+  disabilityTypes.forEach(d=> disabilityCounts[d] = 0);
+  let disabilityNone = 0;
+  elderlyIds.forEach(id=>{
+    const d = STATE.elderly[id].disability;
+    if(d && disabilityCounts[d] !== undefined) disabilityCounts[d]++;
+    else disabilityNone++;
+  });
+  const disabilityBox = document.getElementById('disabilityGroupBox');
+  if(disabilityBox){
+    const boxClasses = { 'ไม่พิการ':'' };
+    disabilityBox.innerHTML = disabilityTypes.map(d=>{
+      const pct = total ? Math.round(disabilityCounts[d]/total*100) : 0;
+      const cls = boxClasses[d] !== undefined ? boxClasses[d] : 'orange';
+      return `<div class="stat-box ${cls}">
+        <div class="num">${disabilityCounts[d]}</div>
+        <div class="lbl">${d}</div>
+        <div class="sub">${pct}% ของทั้งหมด</div>
+      </div>`;
+    }).join('') + (disabilityNone > 0 ? `
+      <div class="stat-box gray">
+        <div class="num">${disabilityNone}</div>
+        <div class="lbl">ไม่ระบุความพิการ</div>
+      </div>
+    ` : '');
+  }
+
+  /* ---------- 5. สรุปภาพรวมปัญหาสุขภาพ ---------- */
   const healthTbody = document.querySelector('#healthProblemTable tbody');
   if(healthTbody) healthTbody.innerHTML = buildTextCountRows(elderlyIds, 'healthProblem', total);
 
-  /* ---------- 5. สรุปภาพรวมความต้องการ ---------- */
+  /* ---------- 6. สรุปภาพรวมความต้องการ ---------- */
   const needTbody = document.querySelector('#needTable tbody');
   if(needTbody) needTbody.innerHTML = buildTextCountRows(elderlyIds, 'need', total);
 }
@@ -2063,6 +2112,7 @@ function openElderlyModal(eid){
     document.getElementById('elderlyAdlScore').value = (e.adlScore !== undefined && e.adlScore !== null) ? e.adlScore : '';
     document.getElementById('elderlyTai').value = e.tai || '';
     document.getElementById('elderlyAdl').value = e.adlGroup || '1';
+    document.getElementById('elderlyDisability').value = e.disability || 'ไม่พิการ';
     document.getElementById('elderlyHealthProblem').value = e.healthProblem || '';
     document.getElementById('elderlyNeed').value = e.need || '';
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
@@ -2080,6 +2130,7 @@ function openElderlyModal(eid){
     document.getElementById('elderlyAdlScore').value = '';
     document.getElementById('elderlyTai').value = '';
     document.getElementById('elderlyAdl').value = '1';
+    document.getElementById('elderlyDisability').value = 'ไม่พิการ';
     document.getElementById('elderlyHealthProblem').value = '';
     document.getElementById('elderlyNeed').value = '';
     document.getElementById('elderlyPdfMode').value = 'normal';
@@ -2114,6 +2165,7 @@ async function saveElderly(){
       adlScore: document.getElementById('elderlyAdlScore').value === '' ? null : parseInt(document.getElementById('elderlyAdlScore').value,10),
       tai: document.getElementById('elderlyTai').value,
       adlGroup: parseInt(document.getElementById('elderlyAdl').value,10),
+      disability: document.getElementById('elderlyDisability').value,
       healthProblem: document.getElementById('elderlyHealthProblem').value.trim().slice(0,100),
       need: document.getElementById('elderlyNeed').value.trim().slice(0,100),
       photoUrl,
