@@ -199,6 +199,7 @@ tr:hover td{background:#fafcfb;}
 .badge.green{background:var(--primary-light);color:var(--primary-dark);}
 .badge.blue{background:var(--secondary-light);color:var(--secondary);}
 .badge.gray{background:#eef1f0;color:var(--muted);}
+.badge.orange{background:var(--danger-light);color:var(--danger);}
 
 .progress-outer{background:#eef1f0;border-radius:999px;height:10px;overflow:hidden;width:100%;}
 .progress-inner{background:var(--primary);height:100%;transition:width 0.3s;}
@@ -587,11 +588,11 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div class="card">
       <h2>🔐 จัดการบัญชีผู้ใช้และสิทธิ์</h2>
       <p style="font-size:0.82rem;color:var(--muted);margin-top:-4px;">
-        ผู้ที่สมัครสมาชิกใหม่จะได้สิทธิ์ "User" โดยอัตโนมัติ เจ้าของระบบ (Owner) สามารถเลื่อนสิทธิ์เป็น Admin หรือปรับลดสิทธิ์ได้ที่นี่
+        ผู้ที่สมัครสมาชิกใหม่จะได้สิทธิ์ "User" โดยอัตโนมัติ แต่จะมีสถานะ "รออนุมัติ" และไม่สามารถเข้าใช้งานระบบได้จนกว่าเจ้าของระบบ (Owner) จะกดอนุมัติ เจ้าของระบบสามารถเลื่อนสิทธิ์เป็น Admin หรือปรับลดสิทธิ์ได้ที่นี่ด้วย
       </p>
       <div class="table-wrap">
         <table id="usersTable"><thead><tr>
-          <th>ชื่อ</th><th>อีเมล</th><th>สิทธิ์</th><th>สมัครเมื่อ</th><th></th>
+          <th>ชื่อ</th><th>อีเมล</th><th>สถานะ</th><th>สิทธิ์</th><th>สมัครเมื่อ</th><th></th>
         </tr></thead><tbody></tbody></table>
       </div>
     </div>
@@ -933,8 +934,14 @@ async function doRegister(){
   try{
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     await usersRef.child(cred.user.uid).set({
-      name, email, role:'user', createdAt: Date.now()
+      name, email, role:'user', status:'pending', createdAt: Date.now()
     });
+    await auth.signOut();
+    document.getElementById('regName').value = '';
+    document.getElementById('regEmail').value = '';
+    document.getElementById('regPassword').value = '';
+    document.querySelector('.auth-tab-btn[data-auth-tab="login"]').click();
+    document.getElementById('loginError').textContent = 'สมัครสมาชิกสำเร็จ กรุณารอการอนุมัติจากเจ้าของระบบ (Owner) ก่อนเข้าใช้งาน';
   } catch(err){
     errEl.textContent = authErrorMessage(err);
   } finally {
@@ -968,13 +975,26 @@ auth.onAuthStateChanged(async (fbUser)=>{
   // fetch / create profile
   let snap = await usersRef.child(fbUser.uid).once('value');
   if(!snap.exists()){
-    // fallback profile (e.g. account created before this system existed)
+    // fallback profile (e.g. account created before this system existed) - approved by default so existing users are not locked out
     await usersRef.child(fbUser.uid).set({
-      name: fbUser.email, email: fbUser.email, role:'user', createdAt: Date.now()
+      name: fbUser.email, email: fbUser.email, role:'user', status:'approved', createdAt: Date.now()
     });
     snap = await usersRef.child(fbUser.uid).once('value');
   }
   const profile = snap.val();
+  // profiles created before the approval feature existed have no status field - treat them as already approved
+  const status = profile.status || 'approved';
+  if(status === 'pending'){
+    await auth.signOut();
+    CURRENT_USER = null;
+    document.getElementById('guestBadge').style.display = 'flex';
+    document.getElementById('userBadge').style.display = 'none';
+    document.getElementById('usersTabBtn').style.display = 'none';
+    goToDashboardTab();
+    openAuthOverlay();
+    document.getElementById('loginError').textContent = 'บัญชีของคุณยังรออนุมัติจากเจ้าของระบบ (Owner) กรุณาลองเข้าสู่ระบบใหม่อีกครั้งภายหลัง';
+    return;
+  }
   CURRENT_USER = { uid: fbUser.uid, email: fbUser.email, name: profile.name || fbUser.email, role: profile.role || 'user' };
 
   document.getElementById('authOverlay').classList.add('hide');
@@ -1010,6 +1030,13 @@ function bindUsersTabEvents(){
     showToast('เปลี่ยนสิทธิ์ผู้ใช้เรียบร้อย','success');
   });
   tbody.addEventListener('click', async (e)=>{
+    const approveBtn = e.target.closest('[data-approve-user]');
+    if(approveBtn){
+      const uid = approveBtn.dataset.approveUser;
+      await usersRef.child(uid).update({ status:'approved' });
+      showToast('อนุมัติผู้ใช้เรียบร้อย','success');
+      return;
+    }
     const btn = e.target.closest('[data-del-user]');
     if(!btn) return;
     const uid = btn.dataset.delUser;
@@ -1031,9 +1058,17 @@ function renderUsersTable(){
   tbody.innerHTML = ids.map(uid=>{
     const u = STATE.users[uid];
     const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString('th-TH') : '-';
+    const status = u.status || 'approved';
+    const statusBadge = status === 'pending'
+      ? `<span class="badge orange">รออนุมัติ</span>`
+      : `<span class="badge green">อนุมัติแล้ว</span>`;
+    const approveBtn = status === 'pending'
+      ? `<button class="btn btn-primary btn-sm" data-approve-user="${uid}">อนุมัติ</button>`
+      : '';
     return `<tr>
       <td>${escapeHtml(u.name)}</td>
       <td>${escapeHtml(u.email)}</td>
+      <td>${statusBadge}</td>
       <td>
         <select data-role-select="${uid}" style="width:auto;padding:5px 8px;">
           <option value="user" ${u.role==='user'?'selected':''}>User</option>
@@ -1042,7 +1077,7 @@ function renderUsersTable(){
         </select>
       </td>
       <td>${created}</td>
-      <td><button class="btn btn-danger btn-sm" data-del-user="${uid}">ลบ</button></td>
+      <td style="display:flex;gap:6px;">${approveBtn}<button class="btn btn-danger btn-sm" data-del-user="${uid}">ลบ</button></td>
     </tr>`;
   }).join('');
 }
