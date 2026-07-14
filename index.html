@@ -2305,8 +2305,12 @@ function renderLtcTable(){
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  ids = ids.filter(id=>{
+    const e = STATE.elderly[id];
+    return e.ltcSupport && e.ltcSupport.length > 0;
+  });
   if(ids.length === 0){
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">ไม่พบผู้สูงอายุที่ได้รับการสนับสนุน</td></tr>`;
     return;
   }
   tbody.innerHTML = ids.map(id=>{
@@ -2332,8 +2336,12 @@ function exportLtcToExcel(){
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  ids = ids.filter(id=>{
+    const e = STATE.elderly[id];
+    return e.ltcSupport && e.ltcSupport.length > 0;
+  });
   if(ids.length === 0){
-    showToast('ไม่พบข้อมูลผู้สูงอายุสำหรับส่งออก','error');
+    showToast('ไม่พบผู้สูงอายุที่ได้รับการสนับสนุนสำหรับส่งออก','error');
     return;
   }
   const header = ['เลขบัตรประชาชน','ชื่อ-สกุล','อายุ','ที่อยู่','คะแนน ADL','กลุ่ม ADL','สิ่งของสนับสนุนจากโครงการ LTC'];
