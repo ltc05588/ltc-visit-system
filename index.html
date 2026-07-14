@@ -590,6 +590,29 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
   <div class="tab-panel" id="tab-ltc">
     <div class="card">
       <div class="section-actions">
+        <h2 style="margin:0;">📊 สรุปจำนวนผู้ได้รับสิ่งของสนับสนุนจากโครงการ LTC ปี 69</h2>
+      </div>
+      <div class="table-wrap">
+        <table id="ltcSummaryTable">
+          <thead><tr>
+            <th>รายการ</th><th>รายละเอียด</th><th>จำนวนผู้ได้รับสิ่งของ (คน)</th><th>จำนวนเงิน (บาท)</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>ผ้าอ้อมผู้ใหญ่สำเร็จรูป</td><td>30 คน × 2 ชิ้น/วัน × 150 วัน</td><td class="ltc-count-cell" data-item="ผ้าอ้อมผู้ใหญ่สำเร็จรูป">0</td><td>85,500</td></tr>
+            <tr><td>แผ่นรองซับ</td><td>10 คน × 2 ชิ้น/วัน × 150 วัน</td><td class="ltc-count-cell" data-item="แผ่นรองซับ">0</td><td>18,000</td></tr>
+            <tr><td>อาหารเสริมสำหรับผู้สูงอายุ</td><td>80 กระปุก × 900 บาท</td><td class="ltc-count-cell" data-item="อาหารเสริมสำหรับผู้สูงอายุ">0</td><td>72,000</td></tr>
+            <tr><td>เครื่องวัดความดันโลหิต</td><td>11 เครื่อง × 2,500 บาท</td><td class="ltc-count-cell" data-item="เครื่องวัดความดันโลหิต">0</td><td>27,500</td></tr>
+            <tr><td>เครื่องวัดออกซิเจนปลายนิ้ว</td><td>11 อัน × 1,200 บาท</td><td class="ltc-count-cell" data-item="เครื่องวัดออกซิเจนปลายนิ้ว">0</td><td>13,200</td></tr>
+            <tr><td>เครื่องวัดอุณหภูมิ(Digital)</td><td>11 อัน × 800 บาท</td><td class="ltc-count-cell" data-item="เครื่องวัดอุณหภูมิ(Digital)">0</td><td>8,800</td></tr>
+            <tr><td>ไม้เท้า 3 ขา</td><td>5 อัน × 1,500 บาท</td><td class="ltc-count-cell" data-item="ไม้เท้า 3 ขา">0</td><td>7,500</td></tr>
+            <tr><td>ที่นอนลม</td><td>3 ชุด × 2,500 บาท</td><td class="ltc-count-cell" data-item="ที่นอนลม">0</td><td>7,500</td></tr>
+            <tr style="font-weight:700;"><td>รวมทั้งสิ้น</td><td></td><td id="ltcSummaryTotalCount">0</td><td>240,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-actions">
         <h2 style="margin:0;">🧺 สิ่งของที่สนับสนุนจากโครงการ LTC ปี 69</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-outline" id="exportLtcBtn">⬇ ดาวน์โหลด Excel</button>
@@ -931,7 +954,7 @@ document.getElementById('tabbar').addEventListener('click', (e)=>{
   if(tab === 'dashboard') renderDashboard();
   if(tab === 'cg') renderCgTable();
   if(tab === 'elderly') renderElderlyTable();
-  if(tab === 'ltc') renderLtcTable();
+  if(tab === 'ltc') { renderLtcSummaryTable(); renderLtcTable(); }
   if(tab === 'users') renderUsersTable();
 });
 
@@ -1352,7 +1375,7 @@ function refreshAllDependentUI(){
   if(activeTab === 'dashboard') renderDashboard();
   if(activeTab === 'cg') renderCgTable();
   if(activeTab === 'elderly') renderElderlyTable();
-  if(activeTab === 'ltc') renderLtcTable();
+  if(activeTab === 'ltc') { renderLtcSummaryTable(); renderLtcTable(); }
 }
 
 function populateCgSelects(){
@@ -2313,6 +2336,24 @@ function exportElderlyToExcel(){
   const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
   XLSX.writeFile(wb, `ข้อมูลผู้สูงอายุ_${dateStr}.xlsx`);
   showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อย','success');
+}
+
+function renderLtcSummaryTable(){
+  const counts = {};
+  Object.values(STATE.elderly || {}).forEach(e=>{
+    (e.ltcSupport || []).forEach(item=>{
+      counts[item] = (counts[item] || 0) + 1;
+    });
+  });
+  let totalCount = 0;
+  document.querySelectorAll('#ltcSummaryTable .ltc-count-cell').forEach(td=>{
+    const item = td.dataset.item;
+    const n = counts[item] || 0;
+    td.textContent = n;
+    totalCount += n;
+  });
+  const totalEl = document.getElementById('ltcSummaryTotalCount');
+  if(totalEl) totalEl.textContent = totalCount;
 }
 
 function renderLtcTable(){
