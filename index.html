@@ -561,6 +561,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
         </div>
       </div>
       <div class="filter-bar">
+        <div class="field" style="min-width:200px;">
+          <label>ค้นหา (ชื่อ, สกุล, เลขบัตรประชาชน)</label>
+          <input type="text" id="searchElderly" placeholder="พิมพ์ชื่อ, สกุล หรือเลขบัตรประชาชน">
+        </div>
         <div class="field">
           <label>กรองตาม CG</label>
           <select id="filterElderlyCg"><option value="">ทั้งหมด</option></select>
@@ -592,6 +596,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
         </div>
       </div>
       <div class="filter-bar">
+        <div class="field" style="min-width:200px;">
+          <label>ค้นหา (ชื่อ, สกุล, เลขบัตรประชาชน)</label>
+          <input type="text" id="searchLtc" placeholder="พิมพ์ชื่อ, สกุล หรือเลขบัตรประชาชน">
+        </div>
         <div class="field">
           <label>กรองตาม CG</label>
           <select id="filterLtcCg"><option value="">ทั้งหมด</option></select>
@@ -2206,10 +2214,15 @@ async function deleteCg(cgId){
 function renderElderlyTable(){
   const cgFilter = document.getElementById('filterElderlyCg').value;
   const modeFilter = document.getElementById('filterElderlyMode').value;
+  const searchText = document.getElementById('searchElderly').value.trim().toLowerCase();
   const tbody = document.querySelector('#elderlyTable tbody');
   let ids = Object.keys(STATE.elderly || {}).sort();
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
   if(modeFilter) ids = ids.filter(id=>STATE.elderly[id].pdfMode === modeFilter);
+  if(searchText) ids = ids.filter(id=>{
+    const e = STATE.elderly[id];
+    return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
+  });
   if(ids.length === 0){
     tbody.innerHTML = `<tr><td colspan="11" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
     return;
@@ -2242,9 +2255,14 @@ function renderElderlyTable(){
 function exportElderlyToExcel(){
   const cgFilter = document.getElementById('filterElderlyCg').value;
   const modeFilter = document.getElementById('filterElderlyMode').value;
+  const searchText = document.getElementById('searchElderly').value.trim().toLowerCase();
   let ids = Object.keys(STATE.elderly || {}).sort();
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
   if(modeFilter) ids = ids.filter(id=>STATE.elderly[id].pdfMode === modeFilter);
+  if(searchText) ids = ids.filter(id=>{
+    const e = STATE.elderly[id];
+    return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
+  });
 
   if(ids.length === 0){
     showToast('ไม่พบข้อมูลผู้สูงอายุสำหรับส่งออก','error');
@@ -2300,11 +2318,16 @@ function exportElderlyToExcel(){
 function renderLtcTable(){
   const tbody = document.querySelector('#ltcTable tbody');
   const cgFilter = document.getElementById('filterLtcCg').value;
+  const searchText = document.getElementById('searchLtc').value.trim().toLowerCase();
   let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
     const ea = STATE.elderly[a], eb = STATE.elderly[b];
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(searchText) ids = ids.filter(id=>{
+    const e = STATE.elderly[id];
+    return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
+  });
   ids = ids.filter(id=>{
     const e = STATE.elderly[id];
     return e.ltcSupport && e.ltcSupport.length > 0;
@@ -2331,11 +2354,16 @@ function renderLtcTable(){
 
 function exportLtcToExcel(){
   const cgFilter = document.getElementById('filterLtcCg').value;
+  const searchText = document.getElementById('searchLtc').value.trim().toLowerCase();
   let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
     const ea = STATE.elderly[a], eb = STATE.elderly[b];
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(searchText) ids = ids.filter(id=>{
+    const e = STATE.elderly[id];
+    return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
+  });
   ids = ids.filter(id=>{
     const e = STATE.elderly[id];
     return e.ltcSupport && e.ltcSupport.length > 0;
@@ -2370,6 +2398,7 @@ function exportLtcToExcel(){
 function bindLtcTabEvents(){
   document.getElementById('exportLtcBtn').addEventListener('click', exportLtcToExcel);
   document.getElementById('filterLtcCg').addEventListener('change', renderLtcTable);
+  document.getElementById('searchLtc').addEventListener('input', renderLtcTable);
 }
 
 function bindElderlyTabEvents(){
@@ -2379,6 +2408,7 @@ function bindElderlyTabEvents(){
   document.getElementById('elderlySaveBtn').addEventListener('click', saveElderly);
   document.getElementById('filterElderlyCg').addEventListener('change', renderElderlyTable);
   document.getElementById('filterElderlyMode').addEventListener('change', renderElderlyTable);
+  document.getElementById('searchElderly').addEventListener('input', renderElderlyTable);
   document.getElementById('elderlyPhotoInput').addEventListener('change', async (ev)=>{
     const file = ev.target.files && ev.target.files[0];
     if(!file) return;
