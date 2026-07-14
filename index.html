@@ -22,21 +22,21 @@
 
 <style>
 :root{
-  --primary:#1D9E75;
-  --primary-dark:#167a5a;
-  --primary-light:#e6f5ef;
-  --secondary:#185FA5;
-  --secondary-light:#e8f1fa;
+  --primary:#4FA3E0;
+  --primary-dark:#2E86D6;
+  --primary-light:#eaf5fd;
+  --secondary:#5BB8E8;
+  --secondary-light:#eef8fd;
   --danger:#D85A30;
   --danger-light:#fbeae3;
-  --bg:#F2F5F4;
+  --bg:#F4F9FD;
   --card:#ffffff;
-  --text:#1f2a24;
-  --muted:#6b7c76;
-  --border:#e3e9e7;
+  --text:#26333f;
+  --muted:#78899a;
+  --border:#e0e9f1;
   --radius:12px;
-  --shadow:0 2px 12px rgba(20,40,35,0.08);
-  --shadow-lg:0 8px 30px rgba(20,40,35,0.18);
+  --shadow:0 2px 12px rgba(30,70,110,0.08);
+  --shadow-lg:0 8px 30px rgba(30,70,110,0.18);
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
@@ -398,6 +398,33 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
   <!-- TAB 1: DASHBOARD -->
   <div class="tab-panel active" id="tab-dashboard">
 
+    <!-- ================= สถิติรายเดือน (ย้ายขึ้นบนสุด) ================= -->
+    <div class="card">
+      <div class="filter-bar">
+        <div class="field">
+          <label>เดือน</label>
+          <select id="dashMonth"></select>
+        </div>
+        <div class="field">
+          <label>ปี (พ.ศ.)</label>
+          <select id="dashYear"></select>
+        </div>
+        <button class="btn btn-outline" id="dashRefreshBtn">🔄 รีเฟรช</button>
+      </div>
+    </div>
+
+    <div class="grid-cards" style="margin-bottom:16px;">
+      <div class="card" style="margin-bottom:0;">
+        <h2>📅 สถิติรายเดือน</h2>
+        <div class="grid-cards" id="monthlyStatsBox"></div>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <h2>📈 สถิติรวมทั้งหมด</h2>
+        <div class="grid-cards" id="totalStatsBox"></div>
+      </div>
+    </div>
+    <!-- ================= END สถิติรายเดือน ================= -->
+
     <!-- ================= สรุปข้อมูลผู้สูงอายุ (ภาพรวม) ================= -->
     <div class="card">
       <h2>🧓 สรุปข้อมูลผู้สูงอายุ</h2>
@@ -429,31 +456,6 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       </div>
     </div>
     <!-- ================= END สรุปข้อมูลผู้สูงอายุ ================= -->
-
-    <div class="card">
-      <div class="filter-bar">
-        <div class="field">
-          <label>เดือน</label>
-          <select id="dashMonth"></select>
-        </div>
-        <div class="field">
-          <label>ปี (พ.ศ.)</label>
-          <select id="dashYear"></select>
-        </div>
-        <button class="btn btn-outline" id="dashRefreshBtn">🔄 รีเฟรช</button>
-      </div>
-    </div>
-
-    <div class="grid-cards" style="margin-bottom:16px;">
-      <div class="card" style="margin-bottom:0;">
-        <h2>📅 สถิติรายเดือน</h2>
-        <div class="grid-cards" id="monthlyStatsBox"></div>
-      </div>
-      <div class="card" style="margin-bottom:0;">
-        <h2>📈 สถิติรวมทั้งหมด</h2>
-        <div class="grid-cards" id="totalStatsBox"></div>
-      </div>
-    </div>
 
     <div class="card">
       <h2>👥 ตารางสถานะ CG รายเดือน</h2>
