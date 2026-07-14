@@ -207,6 +207,10 @@ tr:hover td{background:#fdf6fa;}
 .badge.gray{background:#eef1f0;color:var(--muted);}
 .badge.orange{background:var(--danger-light);color:var(--danger);}
 
+.checkbox-group{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff;}
+.checkbox-item{display:flex;align-items:center;gap:8px;font-size:0.88rem;font-weight:400;color:var(--text);cursor:pointer;}
+.checkbox-item input{width:16px;height:16px;flex:none;cursor:pointer;}
+
 .progress-outer{background:#eef1f0;border-radius:999px;height:10px;overflow:hidden;width:100%;}
 .progress-inner{background:var(--primary);height:100%;transition:width 0.3s;}
 
@@ -395,6 +399,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <button class="tab-btn" data-tab="record" data-auth="1">📷 บันทึกการเยี่ยม</button>
     <button class="tab-btn" data-tab="cg" data-auth="1">👥 จัดการ CG</button>
     <button class="tab-btn" data-tab="elderly" data-auth="1">👴 จัดการผู้สูงอายุ</button>
+    <button class="tab-btn" data-tab="ltc" data-auth="1">🧺 สิ่งของสนับสนุนจากโครงการ LTC ปี 69</button>
     <button class="tab-btn" data-tab="pdf" data-auth="1">📄 สร้าง PDF</button>
     <button class="tab-btn" data-tab="users" id="usersTabBtn" data-auth="1" style="display:none;">🔐 จัดการผู้ใช้</button>
   </div>
@@ -577,6 +582,29 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
   </div>
 
+  <!-- TAB: LTC SUPPORT ITEMS -->
+  <div class="tab-panel" id="tab-ltc">
+    <div class="card">
+      <div class="section-actions">
+        <h2 style="margin:0;">🧺 สิ่งของที่สนับสนุนจากโครงการ LTC ปี 69</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-outline" id="exportLtcBtn">⬇ ดาวน์โหลด Excel</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <div class="field">
+          <label>กรองตาม CG</label>
+          <select id="filterLtcCg"><option value="">ทั้งหมด</option></select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="ltcTable"><thead><tr>
+          <th>เลขบัตรประชาชน</th><th>ชื่อ-สกุล</th><th>อายุ</th><th>ที่อยู่</th><th>คะแนน ADL</th><th>กลุ่ม ADL</th><th>สิ่งของสนับสนุนจากโครงการ LTC</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
   <!-- TAB 5: PDF -->
   <div class="tab-panel" id="tab-pdf">
     <div class="card">
@@ -712,6 +740,19 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
     <div class="field"><label>ปัญหาสุขภาพ</label><textarea id="elderlyHealthProblem" maxlength="100" placeholder="ไม่เกิน 100 ตัวอักษร"></textarea></div>
     <div class="field"><label>ความต้องการ</label><textarea id="elderlyNeed" maxlength="100" placeholder="ไม่เกิน 100 ตัวอักษร"></textarea></div>
+    <div class="field">
+      <label>สิ่งของสนับสนุนจากโครงการ LTC</label>
+      <div class="checkbox-group" id="elderlyLtcSupportGroup">
+        <label class="checkbox-item"><input type="checkbox" value="ผ้าอ้อมผู้ใหญ่สำเร็จรูป"> ผ้าอ้อมผู้ใหญ่สำเร็จรูป</label>
+        <label class="checkbox-item"><input type="checkbox" value="แผ่นรองซับ"> แผ่นรองซับ</label>
+        <label class="checkbox-item"><input type="checkbox" value="อาหารเสริมสำหรับผู้สูงอายุ"> อาหารเสริมสำหรับผู้สูงอายุ</label>
+        <label class="checkbox-item"><input type="checkbox" value="เครื่องวัดความดันโลหิต"> เครื่องวัดความดันโลหิต</label>
+        <label class="checkbox-item"><input type="checkbox" value="เครื่องวัดออกซิเจนปลายนิ้ว"> เครื่องวัดออกซิเจนปลายนิ้ว</label>
+        <label class="checkbox-item"><input type="checkbox" value="เครื่องวัดอุณหภูมิ(Digital)"> เครื่องวัดอุณหภูมิ(Digital)</label>
+        <label class="checkbox-item"><input type="checkbox" value="ไม้เท้า 3 ขา"> ไม้เท้า 3 ขา</label>
+        <label class="checkbox-item"><input type="checkbox" value="ที่นอนลม"> ที่นอนลม</label>
+      </div>
+    </div>
     <div class="field">
       <label>รูปภาพผู้สูงอายุ (ขนาด 1200 x 675 px)</label>
       <input type="file" id="elderlyPhotoInput" accept="image/*">
@@ -882,6 +923,7 @@ document.getElementById('tabbar').addEventListener('click', (e)=>{
   if(tab === 'dashboard') renderDashboard();
   if(tab === 'cg') renderCgTable();
   if(tab === 'elderly') renderElderlyTable();
+  if(tab === 'ltc') renderLtcTable();
   if(tab === 'users') renderUsersTable();
 });
 
@@ -1302,18 +1344,20 @@ function refreshAllDependentUI(){
   if(activeTab === 'dashboard') renderDashboard();
   if(activeTab === 'cg') renderCgTable();
   if(activeTab === 'elderly') renderElderlyTable();
+  if(activeTab === 'ltc') renderLtcTable();
 }
 
 function populateCgSelects(){
   const cgIds = Object.keys(STATE.cgs).sort();
   const opts = cgIds.map(id=>`<option value="${id}">${id} - ${escapeHtml(STATE.cgs[id].name)}</option>`).join('');
-  ['recCg','elderlyCgCode','pdfCgFilter','filterElderlyCg'].forEach(selId=>{
+  ['recCg','elderlyCgCode','pdfCgFilter','filterElderlyCg','filterLtcCg'].forEach(selId=>{
     const sel = document.getElementById(selId);
     if(!sel) return;
     const cur = sel.value;
     let prefix = '';
     if(selId === 'pdfCgFilter') prefix = '<option value="">ทุก CG</option>';
     if(selId === 'filterElderlyCg') prefix = '<option value="">ทั้งหมด</option>';
+    if(selId === 'filterLtcCg') prefix = '<option value="">ทั้งหมด</option>';
     if(selId === 'recCg') prefix = '<option value="">-- เลือก CG --</option>';
     sel.innerHTML = prefix + opts;
     if(cgIds.includes(cur)) sel.value = cur;
@@ -1335,6 +1379,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   bindRecordTabEvents();
   bindCgTabEvents();
   bindElderlyTabEvents();
+  bindLtcTabEvents();
   bindPdfTabEvents();
   bindUsersTabEvents();
   document.getElementById('dashRefreshBtn').addEventListener('click', renderDashboard);
@@ -2252,6 +2297,73 @@ function exportElderlyToExcel(){
   showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อย','success');
 }
 
+function renderLtcTable(){
+  const tbody = document.querySelector('#ltcTable tbody');
+  const cgFilter = document.getElementById('filterLtcCg').value;
+  let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
+    const ea = STATE.elderly[a], eb = STATE.elderly[b];
+    return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
+  });
+  if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(ids.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ids.map(id=>{
+    const e = STATE.elderly[id];
+    const address = [e.houseNo ? ('บ้านเลขที่ '+e.houseNo) : '', e.moo ? ('หมู่ '+e.moo) : ''].filter(Boolean).join(' ') || '-';
+    const support = (e.ltcSupport && e.ltcSupport.length) ? e.ltcSupport.map(s=>`<span class="badge green" style="margin:2px;">${escapeHtml(s)}</span>`).join('') : '-';
+    return `<tr>
+      <td>${escapeHtml(e.idCard || '-')}</td>
+      <td>${escapeHtml(e.name || '-')}</td>
+      <td>${e.age||'-'}</td>
+      <td>${escapeHtml(address)}</td>
+      <td>${(e.adlScore !== undefined && e.adlScore !== null && e.adlScore !== '') ? e.adlScore : '-'}</td>
+      <td>${e.adlGroup||'-'}</td>
+      <td>${support}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportLtcToExcel(){
+  const cgFilter = document.getElementById('filterLtcCg').value;
+  let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
+    const ea = STATE.elderly[a], eb = STATE.elderly[b];
+    return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
+  });
+  if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(ids.length === 0){
+    showToast('ไม่พบข้อมูลผู้สูงอายุสำหรับส่งออก','error');
+    return;
+  }
+  const header = ['เลขบัตรประชาชน','ชื่อ-สกุล','อายุ','ที่อยู่','คะแนน ADL','กลุ่ม ADL','สิ่งของสนับสนุนจากโครงการ LTC'];
+  const rows = ids.map(id=>{
+    const e = STATE.elderly[id];
+    const address = [e.houseNo ? ('บ้านเลขที่ '+e.houseNo) : '', e.moo ? ('หมู่ '+e.moo) : ''].filter(Boolean).join(' ');
+    return [
+      e.idCard || '',
+      e.name || '',
+      e.age || '',
+      address,
+      (e.adlScore !== undefined && e.adlScore !== null && e.adlScore !== '') ? e.adlScore : '',
+      e.adlGroup || '',
+      (e.ltcSupport && e.ltcSupport.length) ? e.ltcSupport.join(', ') : ''
+    ];
+  });
+  const wsData = [header, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{wch:16},{wch:24},{wch:6},{wch:16},{wch:10},{wch:10},{wch:40}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'LTC ปี 69');
+  XLSX.writeFile(wb, `สิ่งของสนับสนุน_LTC_ปี69.xlsx`);
+  showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อย','success');
+}
+
+function bindLtcTabEvents(){
+  document.getElementById('exportLtcBtn').addEventListener('click', exportLtcToExcel);
+  document.getElementById('filterLtcCg').addEventListener('change', renderLtcTable);
+}
+
 function bindElderlyTabEvents(){
   document.getElementById('addElderlyBtn').addEventListener('click', ()=>openElderlyModal(null));
   document.getElementById('exportElderlyBtn').addEventListener('click', exportElderlyToExcel);
@@ -2301,6 +2413,7 @@ function openElderlyDetailModal(eid){
     ${row('กลุ่ม ADL', e.adlGroup||'-')}
     ${row('ปัญหาสุขภาพ', escapeHtml(e.healthProblem||'-'))}
     ${row('ความต้องการ', escapeHtml(e.need||'-'))}
+    ${row('สิ่งของสนับสนุนจากโครงการ LTC', (e.ltcSupport && e.ltcSupport.length) ? escapeHtml(e.ltcSupport.join(', ')) : '-')}
     ${row('CG ผู้ดูแล', escapeHtml(cgName))}
     ${row('โหมด PDF', e.pdfMode==='obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)')}
   `;
@@ -2331,6 +2444,8 @@ function openElderlyModal(eid){
     document.getElementById('elderlyDisability').value = e.disability || 'ไม่พิการ';
     document.getElementById('elderlyHealthProblem').value = e.healthProblem || '';
     document.getElementById('elderlyNeed').value = e.need || '';
+    { const ltcSel = e.ltcSupport || [];
+      document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]').forEach(cb=>{ cb.checked = ltcSel.includes(cb.value); }); }
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
     document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
     if(e.photoUrl){ previewImg.src = e.photoUrl; previewWrap.style.display = 'block'; }
@@ -2349,6 +2464,7 @@ function openElderlyModal(eid){
     document.getElementById('elderlyDisability').value = 'ไม่พิการ';
     document.getElementById('elderlyHealthProblem').value = '';
     document.getElementById('elderlyNeed').value = '';
+    document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
     document.getElementById('elderlyPdfMode').value = 'normal';
     previewImg.src = ''; previewWrap.style.display = 'none';
   }
@@ -2384,6 +2500,7 @@ async function saveElderly(){
       disability: document.getElementById('elderlyDisability').value,
       healthProblem: document.getElementById('elderlyHealthProblem').value.trim().slice(0,100),
       need: document.getElementById('elderlyNeed').value.trim().slice(0,100),
+      ltcSupport: Array.from(document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]:checked')).map(cb=>cb.value),
       photoUrl,
       cgCode,
       pdfMode: document.getElementById('elderlyPdfMode').value,
