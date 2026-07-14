@@ -20,6 +20,9 @@
 <!-- Excel export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+<!-- Chart (pie charts for dashboard summary) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+
 <style>
 :root{
   --primary:#E85D9C;
@@ -220,6 +223,10 @@ tr:hover td{background:#fdf6fa;}
 }
 .drill-item:hover{border-color:var(--primary);}
 .drill-item .meta{color:var(--muted);font-size:0.8rem;}
+
+.chart-wrap{max-width:300px;margin:0 auto 18px;}
+.chart-wrap canvas{max-width:100%;}
+.chart-empty{text-align:center;color:var(--muted);font-size:0.85rem;padding:10px 0;}
 
 .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
 .photo-card{background:#fdf6fa;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
@@ -442,6 +449,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       <div class="grid-cards" id="disabilityGroupBox" style="margin-bottom:18px;"></div>
 
       <h3>5. สรุปภาพรวมปัญหาสุขภาพ</h3>
+      <div class="chart-wrap" id="healthProblemChartWrap"><canvas id="healthProblemChart"></canvas></div>
       <div class="table-wrap" style="margin-bottom:18px;">
         <table id="healthProblemTable"><thead><tr>
           <th>ปัญหาสุขภาพ</th><th>จำนวน (คน)</th><th>สัดส่วน</th>
@@ -449,6 +457,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       </div>
 
       <h3>6. สรุปภาพรวมความต้องการ</h3>
+      <div class="chart-wrap" id="needChartWrap"><canvas id="needChart"></canvas></div>
       <div class="table-wrap">
         <table id="needTable"><thead><tr>
           <th>ความต้องการ</th><th>จำนวน (คน)</th><th>สัดส่วน</th>
@@ -1349,27 +1358,112 @@ function classifyAdlScore(score){
   return 'normal'; // 12 ขึ้นไป
 }
 
-function buildTextCountRows(elderlyIds, field, totalCount){
+/* ---------- หมวดหมู่สำหรับรวมข้อความที่มีความหมายเดียวกัน ----------
+   เรียงจากเจาะจง -> กว้าง คำแรกที่พบใน raw text จะถูกใช้เป็นหมวดหมู่ */
+const HEALTH_PROBLEM_CATEGORIES = [
+  { label:'เบาหวาน', keywords:['เบาหวาน','dm','ดีเอ็ม','น้ำตาลในเลือด'] },
+  { label:'ความดันโลหิตสูง', keywords:['ความดัน','ความดันโลหิต','ht'] },
+  { label:'ไขมันในเลือดสูง', keywords:['ไขมันในเลือด','ไขมัน','คอเลสเตอรอล'] },
+  { label:'โรคหัวใจ', keywords:['หัวใจ'] },
+  { label:'อัมพฤกษ์/อัมพาต/หลอดเลือดสมอง', keywords:['อัมพฤกษ์','อัมพาต','สโตรก','stroke','หลอดเลือดสมอง','เส้นเลือดในสมอง','ซีกอ่อนแรง','แขนขาอ่อนแรง'] },
+  { label:'โรคไต', keywords:['ไตวาย','ฟอกไต','โรคไต','ไต '] },
+  { label:'สมองเสื่อม/อัลไซเมอร์', keywords:['สมองเสื่อม','อัลไซเมอร์','ความจำเสื่อม'] },
+  { label:'ข้อเข่าเสื่อม/ปวดข้อ/กระดูก', keywords:['ข้อเข่า','ปวดเข่า','ข้อเสื่อม','ปวดข้อ','กระดูก','ข้อสะโพก','ปวดหลัง'] },
+  { label:'ตา/สายตา', keywords:['ต้อกระจก','ต้อหิน','สายตา','ตามัว','ตาบอด'] },
+  { label:'หู/การได้ยิน', keywords:['หูตึง','การได้ยิน','หูหนวก'] },
+  { label:'มะเร็ง', keywords:['มะเร็ง'] },
+  { label:'ระบบทางเดินหายใจ/ปอด', keywords:['ปอด','หอบหืด','ถุงลมโป่งพอง','หายใจลำบาก'] },
+  { label:'ผู้ป่วยติดเตียง', keywords:['ติดเตียง'] },
+  { label:'ไม่มีปัญหาสุขภาพ/ปกติ', keywords:['ไม่มีโรคประจำตัว','ไม่มีปัญหาสุขภาพ','สุขภาพแข็งแรง','แข็งแรงดี','ไม่มีโรค'] }
+];
+
+const NEED_CATEGORIES = [
+  { label:'ผ้าอ้อมผู้ใหญ่/แผ่นรองซับ', keywords:['ผ้าอ้อม','แพมเพิส','แผ่นรองซับ'] },
+  { label:'ที่นอนลม/เบาะลม/ป้องกันแผลกดทับ', keywords:['ที่นอนลม','เบาะลม','แผลกดทับ'] },
+  { label:'รถเข็น/วีลแชร์', keywords:['รถเข็น','วีลแชร์','wheelchair'] },
+  { label:'ไม้เท้า/เครื่องช่วยเดิน', keywords:['ไม้เท้า','walker','เครื่องช่วยเดิน','วอกเกอร์'] },
+  { label:'เงินช่วยเหลือ/ค่าใช้จ่าย', keywords:['เงิน','ทุนทรัพย์','ค่าใช้จ่าย','เบี้ยยังชีพ','ทุนการศึกษา'] },
+  { label:'ซ่อมแซม/ปรับสภาพที่อยู่อาศัย', keywords:['ซ่อมบ้าน','ปรับสภาพบ้าน','ซ่อมแซมบ้าน','ที่อยู่อาศัย'] },
+  { label:'อาหารเสริม/โภชนาการ', keywords:['อาหารเสริม','นมผง','โภชนาการ','อาหารทางสายยาง'] },
+  { label:'ยา/เวชภัณฑ์', keywords:['เวชภัณฑ์','ยารักษาโรค','ยาประจำตัว'] },
+  { label:'การดูแล/เยี่ยมบ้านต่อเนื่อง', keywords:['ดูแลต่อเนื่อง','เยี่ยมบ้าน','ผู้ดูแล'] },
+  { label:'ไม่มีความต้องการ', keywords:['ไม่มีความต้องการ','ไม่ต้องการ'] }
+];
+
+function categorizeText(raw, categories){
+  const t = raw.toLowerCase();
+  for(const cat of categories){
+    for(const kw of cat.keywords){
+      if(t.includes(kw.toLowerCase())) return cat.label;
+    }
+  }
+  return raw; // ไม่ตรงกับหมวดหมู่ใด ใช้ข้อความเดิมเป็นหมวดของตัวเอง
+}
+
+function computeTextCounts(elderlyIds, field, categories){
   const counts = {};
-  let emptyCount = 0;
   elderlyIds.forEach(id=>{
     const raw = (STATE.elderly[id][field] || '').trim();
-    if(!raw){ emptyCount++; return; }
-    counts[raw] = (counts[raw] || 0) + 1;
+    const label = raw ? categorizeText(raw, categories) : 'ไม่ระบุ';
+    counts[label] = (counts[label] || 0) + 1;
   });
+  return counts;
+}
+
+function buildTextCountRowsFromCounts(counts, totalCount){
   const rows = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
-  let html = rows.map(([text,count])=>{
+  if(rows.length === 0){
+    return `<tr><td colspan="3" class="empty-state">ยังไม่มีข้อมูล</td></tr>`;
+  }
+  return rows.map(([text,count])=>{
     const pct = totalCount ? Math.round(count/totalCount*100) : 0;
-    return `<tr><td>${escapeHtml(text)}</td><td>${count}</td><td>${pct}%</td></tr>`;
+    const display = text === 'ไม่ระบุ' ? '<span class="badge gray">ไม่ระบุ</span>' : escapeHtml(text);
+    return `<tr><td>${display}</td><td>${count}</td><td>${pct}%</td></tr>`;
   }).join('');
-  if(emptyCount > 0){
-    const pct = totalCount ? Math.round(emptyCount/totalCount*100) : 0;
-    html += `<tr><td><span class="badge gray">ไม่ระบุ</span></td><td>${emptyCount}</td><td>${pct}%</td></tr>`;
+}
+
+const PIE_PALETTE = ['#E85D9C','#F27EB0','#C23B7A','#f6a6c9','#d8305a','#f9c1da','#b23e6b','#f4879e','#c98a1a','#e57bab','#9a5570','#facde0','#7a3f57','#e0a4c2'];
+let healthProblemChartInstance = null;
+let needChartInstance = null;
+
+function renderCategoryPieChart(canvasId, counts, instanceKey){
+  const canvas = document.getElementById(canvasId);
+  const wrap = canvas ? canvas.closest('.chart-wrap') : null;
+  if(!canvas || !wrap) return;
+  if(instanceKey === 'health' && healthProblemChartInstance){ healthProblemChartInstance.destroy(); healthProblemChartInstance = null; }
+  if(instanceKey === 'need' && needChartInstance){ needChartInstance.destroy(); needChartInstance = null; }
+
+  const entries = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
+  if(entries.length === 0 || typeof Chart === 'undefined'){
+    wrap.innerHTML = `<div class="chart-empty">ยังไม่มีข้อมูลสำหรับแสดงแผนภูมิ</div>`;
+    return;
   }
-  if(!html){
-    html = `<tr><td colspan="3" class="empty-state">ยังไม่มีข้อมูล</td></tr>`;
+  if(!wrap.querySelector('canvas')){
+    wrap.innerHTML = `<canvas id="${canvasId}"></canvas>`;
   }
-  return html;
+  const freshCanvas = document.getElementById(canvasId);
+  const labels = entries.map(e=>e[0]);
+  const data = entries.map(e=>e[1]);
+  const colors = labels.map((_,i)=> PIE_PALETTE[i % PIE_PALETTE.length]);
+
+  const chart = new Chart(freshCanvas.getContext('2d'), {
+    type: 'pie',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor:'#fff', borderWidth:2 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position:'bottom', labels:{ font:{ family:"'Sarabun',sans-serif", size:11 }, boxWidth:12, padding:8 } },
+        tooltip: { callbacks: { label: function(ctx){
+          const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+          const pct = total ? Math.round(ctx.parsed/total*100) : 0;
+          return ctx.label + ': ' + ctx.parsed + ' คน (' + pct + '%)';
+        }}}
+      }
+    }
+  });
+  if(instanceKey === 'health') healthProblemChartInstance = chart;
+  else needChartInstance = chart;
 }
 
 function renderElderlySummary(){
@@ -1495,12 +1589,16 @@ function renderElderlySummary(){
   }
 
   /* ---------- 5. สรุปภาพรวมปัญหาสุขภาพ ---------- */
+  const healthCounts = computeTextCounts(elderlyIds, 'healthProblem', HEALTH_PROBLEM_CATEGORIES);
   const healthTbody = document.querySelector('#healthProblemTable tbody');
-  if(healthTbody) healthTbody.innerHTML = buildTextCountRows(elderlyIds, 'healthProblem', total);
+  if(healthTbody) healthTbody.innerHTML = buildTextCountRowsFromCounts(healthCounts, total);
+  renderCategoryPieChart('healthProblemChart', healthCounts, 'health');
 
   /* ---------- 6. สรุปภาพรวมความต้องการ ---------- */
+  const needCounts = computeTextCounts(elderlyIds, 'need', NEED_CATEGORIES);
   const needTbody = document.querySelector('#needTable tbody');
-  if(needTbody) needTbody.innerHTML = buildTextCountRows(elderlyIds, 'need', total);
+  if(needTbody) needTbody.innerHTML = buildTextCountRowsFromCounts(needCounts, total);
+  renderCategoryPieChart('needChart', needCounts, 'need');
 }
 
 function renderDashboard(){
