@@ -512,22 +512,15 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       </div>
       <div id="recInfoCard"></div>
 
-      <div class="row">
-        <div class="field">
-          <label>3. เดือน</label>
-          <select id="recMonth"></select>
+      <div class="field">
+        <label>3. วันที่เยี่ยม</label>
+        <select id="recMonth" style="display:none;"></select>
+        <select id="recYear" style="display:none;"></select>
+        <div>
+          <button class="btn btn-secondary" id="openCalendarBtn" type="button">🗓️ เลือกวันที่เยี่ยม</button>
         </div>
-        <div class="field">
-          <label>ปี (พ.ศ.)</label>
-          <select id="recYear"></select>
-        </div>
-        <div class="field">
-          <label>จำนวนวันที่เยี่ยม</label>
-          <input type="number" id="recDayCount" min="1" max="31" placeholder="เช่น 10">
-        </div>
+        <div class="chips-wrap" id="recDateChips"></div>
       </div>
-      <button class="btn btn-secondary" id="openCalendarBtn" type="button">🗓️ เลือกวันที่เยี่ยม</button>
-      <div class="chips-wrap" id="recDateChips"></div>
 
       <hr class="sep">
       <label>4. อัปโหลดรูปภาพ (เลือกได้หลายไฟล์)</label>
@@ -1963,9 +1956,7 @@ function bindRecordTabEvents(){
   document.getElementById('openCalendarBtn').addEventListener('click', ()=>{
     const be = parseInt(document.getElementById('recYear').value, 10);
     const m = parseInt(document.getElementById('recMonth').value, 10);
-    const count = parseInt(document.getElementById('recDayCount').value, 10);
-    if(!count || count < 1){ showToast('กรุณาระบุจำนวนวันที่เยี่ยมก่อน','error'); return; }
-    openCalendarModal(ceYear(be), m, count);
+    openCalendarModal(ceYear(be), m, 0);
   });
 
   document.getElementById('recPhotos').addEventListener('change', async (e)=>{
@@ -1992,7 +1983,9 @@ let calendarTempSelected = [];
 function openCalendarModal(gy, month, requiredCount){
   calendarYear = gy; calendarMonth = month; calendarResolveCount = requiredCount;
   calendarTempSelected = recSelectedDates.slice();
-  document.getElementById('calendarModalTitle').textContent = `เลือกวันที่เยี่ยม (${requiredCount} วัน) - ${THAI_MONTHS[month]} ${beYear(gy)}`;
+  document.getElementById('calendarModalTitle').textContent = requiredCount > 0
+    ? `เลือกวันที่เยี่ยม (${requiredCount} วัน) - ${THAI_MONTHS[month]} ${beYear(gy)}`
+    : `เลือกวันที่เยี่ยม - ${THAI_MONTHS[month]} ${beYear(gy)}`;
   const dowBox = document.getElementById('calendarDow');
   dowBox.innerHTML = THAI_DOW.map(d=>`<div class="dow">${d}</div>`).join('');
   renderCalendarDays();
@@ -2028,7 +2021,9 @@ function renderCalendarChips(){
   const box = document.getElementById('calendarSelectedChips');
   const sorted = calendarTempSelected.slice().sort();
   box.innerHTML = sorted.map(iso=>`<span class="chip">${formatThaiDateShort(iso)}<span class="rm" data-rm="${iso}">×</span></span>`).join('')
-    + `<div style="width:100%;font-size:0.75rem;color:var(--muted);margin-top:4px;">เลือกแล้ว ${sorted.length} / ${calendarResolveCount} วัน</div>`;
+    + (calendarResolveCount > 0
+        ? `<div style="width:100%;font-size:0.75rem;color:var(--muted);margin-top:4px;">เลือกแล้ว ${sorted.length} / ${calendarResolveCount} วัน</div>`
+        : `<div style="width:100%;font-size:0.75rem;color:var(--muted);margin-top:4px;">เลือกแล้ว ${sorted.length} วัน</div>`);
   box.querySelectorAll('[data-rm]').forEach(el=>{
     el.addEventListener('click', ()=>{
       const iso = el.dataset.rm;
@@ -2042,8 +2037,12 @@ document.getElementById('calendarCancelBtn').addEventListener('click', ()=>{
   document.getElementById('calendarModal').classList.remove('show');
 });
 document.getElementById('calendarOkBtn').addEventListener('click', ()=>{
-  if(calendarTempSelected.length !== calendarResolveCount){
+  if(calendarResolveCount > 0 && calendarTempSelected.length !== calendarResolveCount){
     showToast(`กรุณาเลือกให้ครบ ${calendarResolveCount} วัน (เลือกแล้ว ${calendarTempSelected.length} วัน)`, 'error');
+    return;
+  }
+  if(calendarTempSelected.length === 0){
+    showToast('กรุณาเลือกวันที่เยี่ยมอย่างน้อย 1 วัน', 'error');
     return;
   }
   recSelectedDates = calendarTempSelected.slice().sort();
@@ -2105,7 +2104,6 @@ async function saveVisitRecords(){
     document.getElementById('recDateChips').innerHTML = '';
     document.getElementById('recThumbs').innerHTML = '';
     document.getElementById('recPhotos').value = '';
-    document.getElementById('recDayCount').value = '';
     document.getElementById('recNote').value = '';
     progressText.textContent = '';
   } catch(err){
