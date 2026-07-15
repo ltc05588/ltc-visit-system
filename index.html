@@ -526,31 +526,96 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       <label>4. การวัดสัญญาณชีพ (Vital signs)</label>
       <div class="row" style="margin-top:8px;">
         <div class="field">
-          <label>BP - ค่าบน (Systolic)</label>
-          <input type="number" id="recBpSys" placeholder="เช่น 120">
+          <label>ค่าความดันโลหิต (BP)</label>
+          <input type="text" id="recBp" placeholder="เช่น 120/80">
         </div>
         <div class="field">
-          <label>BP - ค่าล่าง (Diastolic)</label>
-          <input type="number" id="recBpDia" placeholder="เช่น 80">
+          <label>อัตราการเต้นของหัวใจ (PR)</label>
+          <input type="text" id="recPr" placeholder="เช่น 78 ครั้ง/นาที">
         </div>
       </div>
       <div class="row">
         <div class="field">
-          <label>PR (ครั้ง/นาที)</label>
-          <input type="number" id="recPr" placeholder="เช่น 78">
+          <label>อัตราการหายใจ (RR)</label>
+          <input type="text" id="recRr" placeholder="เช่น 20 ครั้ง/นาที">
         </div>
         <div class="field">
-          <label>RR (ครั้ง/นาที)</label>
-          <input type="number" id="recRr" placeholder="เช่น 20">
-        </div>
-        <div class="field">
-          <label>T (°C)</label>
-          <input type="number" step="0.1" id="recTemp" placeholder="เช่น 36.5">
+          <label>อุณหภูมิ (T)</label>
+          <input type="text" id="recTemp" placeholder="เช่น 37.0 °C">
         </div>
       </div>
 
       <hr class="sep">
-      <label>5. อัปโหลดรูปภาพ (เลือกได้หลายไฟล์)</label>
+      <label>5. การประเมินสภาพและการดูแล</label>
+      <div class="row" style="margin-top:8px;">
+        <div class="field">
+          <label>การรับประทานยา</label>
+          <select id="recMedication">
+            <option value="">-- เลือก --</option>
+            <option value="กินยาสม่ำเสมอ">กินยาสม่ำเสมอ</option>
+            <option value="กินยาไม่สม่ำเสมอ">กินยาไม่สม่ำเสมอ</option>
+            <option value="ไม่กินยา">ไม่กินยา</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>การดูแลกิจวัตรประจำวัน</label>
+          <select id="recDailyCare">
+            <option value="">-- เลือก --</option>
+            <option value="ช่วยเหลือตัวเองได้">ช่วยเหลือตัวเองได้</option>
+            <option value="ช่วยเหลือตัวเองได้เล็กน้อย">ช่วยเหลือตัวเองได้เล็กน้อย</option>
+            <option value="ต้องให้ญาติช่วยดูแล">ต้องให้ญาติช่วยดูแล</option>
+            <option value="ช่วยเหลือตัวเองไม่ได้">ช่วยเหลือตัวเองไม่ได้</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>การขับถ่าย</label>
+          <select id="recExcretion">
+            <option value="">-- เลือก --</option>
+            <option value="ปกติ">ปกติ</option>
+            <option value="ดูแลสายสวนปัสสาวะ">ดูแลสายสวนปัสสาวะ</option>
+            <option value="มีปัญหาการขับถ่าย">มีปัญหาการขับถ่าย</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>วิธีการรับประทานอาหาร</label>
+          <select id="recFeedingMethod">
+            <option value="">-- เลือก --</option>
+            <option value="รับประทานเอง">รับประทานเอง</option>
+            <option value="CG ป้อนอาหาร">CG ป้อนอาหาร</option>
+            <option value="ให้อาหารทางสายยาง">ให้อาหารทางสายยาง</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>การบริโภคอาหาร</label>
+          <select id="recFoodType">
+            <option value="">-- เลือก --</option>
+            <option value="อาหารธรรมดา">อาหารธรรมดา</option>
+            <option value="อาหารอ่อน">อาหารอ่อน</option>
+            <option value="อาหารแข็ง">อาหารแข็ง</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>คะแนน ADL (0-20)</label>
+          <input type="number" id="recAdlScoreVisit" min="0" max="20" placeholder="0-20">
+        </div>
+      </div>
+      <div class="field">
+        <label>กิจกรรมที่ได้ทำในการดูแล (เลือกได้หลายข้อ)</label>
+        <div class="checkbox-group" id="recCareActivitiesGroup">
+          <label class="checkbox-item"><input type="checkbox" value="ปฏิบัติตาม care plan"> ปฏิบัติตาม care plan</label>
+          <label class="checkbox-item"><input type="checkbox" value="ดูแลความสะอาดร่างกายคนไข้"> ดูแลความสะอาดร่างกายคนไข้</label>
+          <label class="checkbox-item"><input type="checkbox" value="ดูแลสภาพแวดล้อมทั่วไป"> ดูแลสภาพแวดล้อมทั่วไป</label>
+          <label class="checkbox-item"><input type="checkbox" value="ช่วยเหลือญาติทำกิจกรรม"> ช่วยเหลือญาติทำกิจกรรม</label>
+          <label class="checkbox-item"><input type="checkbox" value="ให้กำลังใจญาติและผู้ป่วย"> ให้กำลังใจญาติและผู้ป่วย</label>
+        </div>
+      </div>
+
+      <hr class="sep">
+      <label>6. อัปโหลดรูปภาพ (เลือกได้หลายไฟล์)</label>
       <input type="file" id="recPhotos" accept="image/*" multiple>
       <div class="thumbs" id="recThumbs"></div>
 
@@ -2102,11 +2167,17 @@ async function saveVisitRecords(){
   const e = STATE.elderly[elderlyId];
   const cg = STATE.cgs[cgCode];
   const note = document.getElementById('recNote').value.trim();
-  const bpSys = document.getElementById('recBpSys').value.trim();
-  const bpDia = document.getElementById('recBpDia').value.trim();
+  const bp = document.getElementById('recBp').value.trim();
   const pr = document.getElementById('recPr').value.trim();
   const rr = document.getElementById('recRr').value.trim();
   const temp = document.getElementById('recTemp').value.trim();
+  const medication = document.getElementById('recMedication').value;
+  const dailyCare = document.getElementById('recDailyCare').value;
+  const excretion = document.getElementById('recExcretion').value;
+  const feedingMethod = document.getElementById('recFeedingMethod').value;
+  const foodType = document.getElementById('recFoodType').value;
+  const adlScoreVisit = document.getElementById('recAdlScoreVisit').value.trim();
+  const careActivities = Array.from(document.querySelectorAll('#recCareActivitiesGroup input[type=checkbox]:checked')).map(cb=>cb.value);
 
   const shuffledDates = shuffleArray(recSelectedDates);
   const saveBtn = document.getElementById('saveVisitBtn');
@@ -2127,7 +2198,8 @@ async function saveVisitRecords(){
         cgCode, cgName: cg.name,
         photoUrl: url,
         note, pdfMode: e.pdfMode,
-        vitalSigns: { bpSys, bpDia, pr, rr, temp }
+        vitalSigns: { bp, pr, rr, temp },
+        careAssessment: { medication, dailyCare, excretion, feedingMethod, foodType, adlScoreVisit, careActivities }
       };
     }
     await visitsRef.update(updates);
@@ -2138,11 +2210,17 @@ async function saveVisitRecords(){
     document.getElementById('recThumbs').innerHTML = '';
     document.getElementById('recPhotos').value = '';
     document.getElementById('recNote').value = '';
-    document.getElementById('recBpSys').value = '';
-    document.getElementById('recBpDia').value = '';
+    document.getElementById('recBp').value = '';
     document.getElementById('recPr').value = '';
     document.getElementById('recRr').value = '';
     document.getElementById('recTemp').value = '';
+    document.getElementById('recMedication').value = '';
+    document.getElementById('recDailyCare').value = '';
+    document.getElementById('recExcretion').value = '';
+    document.getElementById('recFeedingMethod').value = '';
+    document.getElementById('recFoodType').value = '';
+    document.getElementById('recAdlScoreVisit').value = '';
+    document.querySelectorAll('#recCareActivitiesGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
     progressText.textContent = '';
   } catch(err){
     console.error(err);
