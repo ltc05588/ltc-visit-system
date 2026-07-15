@@ -639,6 +639,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
             <option value="เครื่องวัดอุณหภูมิ(Digital)">เครื่องวัดอุณหภูมิ(Digital)</option>
             <option value="ไม้เท้า 3 ขา">ไม้เท้า 3 ขา</option>
             <option value="ที่นอนลม">ที่นอนลม</option>
+            <option value="__NONE__">— ยังไม่ได้รับการสนับสนุน —</option>
           </select>
         </div>
         <div class="field">
@@ -2391,19 +2392,24 @@ function renderLtcTable(){
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
-  if(itemFilter) ids = ids.filter(id=>(STATE.elderly[id].ltcSupport || []).includes(itemFilter));
+  if(itemFilter === '__NONE__') {
+    ids = ids.filter(id=>!(STATE.elderly[id].ltcSupport && STATE.elderly[id].ltcSupport.length > 0));
+  } else {
+    if(itemFilter) ids = ids.filter(id=>(STATE.elderly[id].ltcSupport || []).includes(itemFilter));
+    ids = ids.filter(id=>{
+      const e = STATE.elderly[id];
+      return e.ltcSupport && e.ltcSupport.length > 0;
+    });
+  }
   if(searchText) ids = ids.filter(id=>{
     const e = STATE.elderly[id];
     return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
   });
-  ids = ids.filter(id=>{
-    const e = STATE.elderly[id];
-    return e.ltcSupport && e.ltcSupport.length > 0;
-  });
   const countEl = document.getElementById('ltcFilterCount');
   if(countEl) countEl.textContent = `${ids.length} คน`;
   if(ids.length === 0){
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">ไม่พบผู้สูงอายุที่ได้รับการสนับสนุน</td></tr>`;
+    const emptyMsg = itemFilter === '__NONE__' ? 'ไม่พบผู้สูงอายุที่ยังไม่ได้รับการสนับสนุน' : 'ไม่พบผู้สูงอายุที่ได้รับการสนับสนุน';
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${emptyMsg}</td></tr>`;
     return;
   }
   tbody.innerHTML = ids.map(id=>{
@@ -2431,17 +2437,22 @@ function exportLtcToExcel(){
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
-  if(itemFilter) ids = ids.filter(id=>(STATE.elderly[id].ltcSupport || []).includes(itemFilter));
+  if(itemFilter === '__NONE__') {
+    ids = ids.filter(id=>!(STATE.elderly[id].ltcSupport && STATE.elderly[id].ltcSupport.length > 0));
+  } else {
+    if(itemFilter) ids = ids.filter(id=>(STATE.elderly[id].ltcSupport || []).includes(itemFilter));
+    ids = ids.filter(id=>{
+      const e = STATE.elderly[id];
+      return e.ltcSupport && e.ltcSupport.length > 0;
+    });
+  }
   if(searchText) ids = ids.filter(id=>{
     const e = STATE.elderly[id];
     return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
   });
-  ids = ids.filter(id=>{
-    const e = STATE.elderly[id];
-    return e.ltcSupport && e.ltcSupport.length > 0;
-  });
   if(ids.length === 0){
-    showToast('ไม่พบผู้สูงอายุที่ได้รับการสนับสนุนสำหรับส่งออก','error');
+    const emptyMsg = itemFilter === '__NONE__' ? 'ไม่พบผู้สูงอายุที่ยังไม่ได้รับการสนับสนุนสำหรับส่งออก' : 'ไม่พบผู้สูงอายุที่ได้รับการสนับสนุนสำหรับส่งออก';
+    showToast(emptyMsg,'error');
     return;
   }
   const header = ['เลขบัตรประชาชน','ชื่อ-สกุล','อายุ','ที่อยู่','คะแนน ADL','กลุ่ม ADL','สิ่งของสนับสนุนจากโครงการ LTC'];
