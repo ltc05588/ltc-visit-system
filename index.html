@@ -641,6 +641,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
             <option value="ที่นอนลม">ที่นอนลม</option>
           </select>
         </div>
+        <div class="field">
+          <label>จำนวนที่พบ</label>
+          <div id="ltcFilterCount" style="font-weight:700;padding:6px 0;">0 คน</div>
+        </div>
       </div>
       <div class="table-wrap">
         <table id="ltcTable"><thead><tr>
@@ -2396,6 +2400,8 @@ function renderLtcTable(){
     const e = STATE.elderly[id];
     return e.ltcSupport && e.ltcSupport.length > 0;
   });
+  const countEl = document.getElementById('ltcFilterCount');
+  if(countEl) countEl.textContent = `${ids.length} คน`;
   if(ids.length === 0){
     tbody.innerHTML = `<tr><td colspan="7" class="empty-state">ไม่พบผู้สูงอายุที่ได้รับการสนับสนุน</td></tr>`;
     return;
