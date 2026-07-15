@@ -627,6 +627,20 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
           <label>กรองตาม CG</label>
           <select id="filterLtcCg"><option value="">ทั้งหมด</option></select>
         </div>
+        <div class="field">
+          <label>กรองตามสิ่งของที่ได้รับการสนับสนุน</label>
+          <select id="filterLtcItem">
+            <option value="">ทั้งหมด</option>
+            <option value="ผ้าอ้อมผู้ใหญ่สำเร็จรูป">ผ้าอ้อมผู้ใหญ่สำเร็จรูป</option>
+            <option value="แผ่นรองซับ">แผ่นรองซับ</option>
+            <option value="อาหารเสริมสำหรับผู้สูงอายุ">อาหารเสริมสำหรับผู้สูงอายุ</option>
+            <option value="เครื่องวัดความดันโลหิต">เครื่องวัดความดันโลหิต</option>
+            <option value="เครื่องวัดออกซิเจนปลายนิ้ว">เครื่องวัดออกซิเจนปลายนิ้ว</option>
+            <option value="เครื่องวัดอุณหภูมิ(Digital)">เครื่องวัดอุณหภูมิ(Digital)</option>
+            <option value="ไม้เท้า 3 ขา">ไม้เท้า 3 ขา</option>
+            <option value="ที่นอนลม">ที่นอนลม</option>
+          </select>
+        </div>
       </div>
       <div class="table-wrap">
         <table id="ltcTable"><thead><tr>
@@ -1511,7 +1525,7 @@ function renderCategoryPieChart(canvasId, counts, instanceKey){
 
   const entries = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
   if(entries.length === 0 || typeof Chart === 'undefined'){
-    wrap.innerHTML = `<div class="chart-empty">ยังไม่มีข้อมูลสำหรับแสดงแผนภูมิ</div>`;
+    wrap.innerHTML = `<div class="chart-empty"></div>`;
     return;
   }
   if(!wrap.querySelector('canvas')){
@@ -2366,12 +2380,14 @@ function renderLtcSummaryTable(){
 function renderLtcTable(){
   const tbody = document.querySelector('#ltcTable tbody');
   const cgFilter = document.getElementById('filterLtcCg').value;
+  const itemFilter = document.getElementById('filterLtcItem').value;
   const searchText = document.getElementById('searchLtc').value.trim().toLowerCase();
   let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
     const ea = STATE.elderly[a], eb = STATE.elderly[b];
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(itemFilter) ids = ids.filter(id=>(STATE.elderly[id].ltcSupport || []).includes(itemFilter));
   if(searchText) ids = ids.filter(id=>{
     const e = STATE.elderly[id];
     return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
@@ -2402,12 +2418,14 @@ function renderLtcTable(){
 
 function exportLtcToExcel(){
   const cgFilter = document.getElementById('filterLtcCg').value;
+  const itemFilter = document.getElementById('filterLtcItem').value;
   const searchText = document.getElementById('searchLtc').value.trim().toLowerCase();
   let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
     const ea = STATE.elderly[a], eb = STATE.elderly[b];
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
   if(cgFilter) ids = ids.filter(id=>STATE.elderly[id].cgCode === cgFilter);
+  if(itemFilter) ids = ids.filter(id=>(STATE.elderly[id].ltcSupport || []).includes(itemFilter));
   if(searchText) ids = ids.filter(id=>{
     const e = STATE.elderly[id];
     return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
@@ -2446,6 +2464,7 @@ function exportLtcToExcel(){
 function bindLtcTabEvents(){
   document.getElementById('exportLtcBtn').addEventListener('click', exportLtcToExcel);
   document.getElementById('filterLtcCg').addEventListener('change', renderLtcTable);
+  document.getElementById('filterLtcItem').addEventListener('change', renderLtcTable);
   document.getElementById('searchLtc').addEventListener('input', renderLtcTable);
 }
 
