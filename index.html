@@ -283,6 +283,9 @@ tr:hover td{background:#fdf6fa;}
 .empty-state{text-align:center;padding:30px 10px;color:var(--muted);font-size:0.85rem;}
 .upload-progress-text{font-size:0.82rem;color:var(--secondary);font-weight:600;margin-top:8px;}
 .info-card{background:var(--secondary-light);border-radius:10px;padding:10px 14px;font-size:0.85rem;color:var(--secondary);margin-bottom:12px;}
+.visit-status-pill{background:var(--danger-light);color:var(--danger);border-radius:10px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.visit-status-pill.ok{background:#e6f7ee;color:#1b8a4c;}
+.visit-status-pill .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:0 0 auto;}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
 .thumbs img{width:66px;height:66px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
 .section-actions{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
@@ -1922,12 +1925,31 @@ function populateElderlySelectsForRecordTab(){
   updateRecInfoCard();
 }
 
+const REQUIRED_VISITS_BY_ADL_GROUP = { 1: 2, 2: 4, 3: 8, 4: 8 };
+
 function updateRecInfoCard(){
   const eid = document.getElementById('recElderly').value;
   const box = document.getElementById('recInfoCard');
   if(!eid || !STATE.elderly[eid]){ box.innerHTML = ''; return; }
   const e = STATE.elderly[eid];
-  box.innerHTML = `<div class="info-card">ℹ️ <strong>${escapeHtml(e.name)}</strong> — โหมด PDF: <strong>${e.pdfMode === 'obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)'}</strong> | อายุ ${e.age||'-'} ปี | ADL กลุ่ม ${e.adlGroup||'-'}</div>`;
+  const infoHtml = `<div class="info-card">ℹ️ <strong>${escapeHtml(e.name)}</strong> — โหมด PDF: <strong>${e.pdfMode === 'obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)'}</strong> | อายุ ${e.age||'-'} ปี | ADL กลุ่ม ${e.adlGroup||'-'}</div>`;
+
+  const required = REQUIRED_VISITS_BY_ADL_GROUP[e.adlGroup] || 0;
+  const be = parseInt(document.getElementById('recYear').value, 10);
+  const m = parseInt(document.getElementById('recMonth').value, 10);
+  let statusHtml = '';
+  if(required > 0 && be && m){
+    const gy = ceYear(be);
+    const visited = Object.values(STATE.visits || {}).filter(v=>{
+      if(v.elderlyId !== eid || !v.visitDate) return false;
+      const d = new Date(v.visitDate);
+      return d.getFullYear() === gy && (d.getMonth()+1) === m;
+    }).length;
+    const remaining = Math.max(required - visited, 0);
+    const pillClass = remaining === 0 ? 'visit-status-pill ok' : 'visit-status-pill';
+    statusHtml = `<div class="${pillClass}"><span class="dot"></span>ต้องเยี่ยม ${required} ครั้ง/เดือน | เยี่ยมแล้ว ${visited} ครั้ง | คงเหลือ ${remaining} ครั้ง</div>`;
+  }
+  box.innerHTML = infoHtml + statusHtml;
 }
 
 function bindRecordTabEvents(){
@@ -1935,6 +1957,8 @@ function bindRecordTabEvents(){
     populateElderlySelectsForRecordTab();
   });
   document.getElementById('recElderly').addEventListener('change', updateRecInfoCard);
+  document.getElementById('recMonth').addEventListener('change', updateRecInfoCard);
+  document.getElementById('recYear').addEventListener('change', updateRecInfoCard);
 
   document.getElementById('openCalendarBtn').addEventListener('click', ()=>{
     const be = parseInt(document.getElementById('recYear').value, 10);
