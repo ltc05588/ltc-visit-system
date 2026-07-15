@@ -1591,12 +1591,19 @@ function renderElderlySummary(){
   const adlGroupBox = document.getElementById('adlGroupBox');
   if(adlGroupBox){
     const boxClasses = ['','blue','orange','red'];
+    const adlGroupDesc = {
+      1: 'เคลื่อนไหวได้บ้าง มีปัญหาการกิน/การขับถ่าย แต่ไม่มีภาวะสับสน',
+      2: 'เคลื่อนไหวได้บ้าง มีภาวะสับสน และอาจมีปัญหาการกิน/การขับถ่าย',
+      3: 'เคลื่อนไหวเองไม่ได้ ไม่มีปัญหาการกิน/การขับถ่าย หรือเจ็บป่วยรุนแรง',
+      4: 'เคลื่อนไหวเองไม่ได้ เจ็บป่วยรุนแรงหรืออยู่ในระยะท้ายของชีวิต'
+    };
     adlGroupBox.innerHTML = [1,2,3,4].map(g=>{
       const pct = total ? Math.round(adlGroupCounts[g]/total*100) : 0;
       return `<div class="stat-box ${boxClasses[g-1]}">
         <div class="num">${adlGroupCounts[g]}</div>
-        <div class="lbl">กลุ่ม ADL ${g}</div>
+        <div class="lbl">กลุ่มที่ ${g}</div>
         <div class="sub">${pct}% ของทั้งหมด</div>
+        <div class="sub" style="margin-top:4px;font-size:0.85em;line-height:1.3;">${adlGroupDesc[g]}</div>
       </div>`;
     }).join('');
   }
