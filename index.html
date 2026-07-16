@@ -624,8 +624,8 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       </div>
 
       <hr class="sep">
-      <label>6. อัปโหลดรูปภาพ (เลือกได้หลายไฟล์)</label>
-      <input type="file" id="recPhotos" accept="image/*" multiple>
+      <label>6. อัปโหลดรูปภาพ (เลือกได้ 1 ภาพเท่านั้น)</label>
+      <input type="file" id="recPhotos" accept="image/*">
       <div class="thumbs" id="recThumbs"></div>
 
       <div class="field" style="margin-top:12px;">
@@ -987,6 +987,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <h3>แก้ไขข้อมูลการเยี่ยม</h3>
     <input type="hidden" id="peVisitId">
     <img id="peImg" style="width:100%;border-radius:8px;margin-bottom:10px;">
+    <div class="field">
+      <label>เปลี่ยนรูปภาพ (เลือกไฟล์ใหม่เพื่อลบรูปเดิมและแทนที่)</label>
+      <input type="file" id="peNewPhoto" accept="image/*">
+    </div>
     <div class="field"><label>วันที่เยี่ยม</label><input type="text" id="peDate" placeholder="YYYY-MM-DD"></div>
 
     <hr class="sep">
@@ -2085,9 +2089,13 @@ function formatThaiDateShort(isoDate){
   return `${d.getDate()} ${THAI_MONTHS_ABBR[d.getMonth()]} ${String(beYear(d.getFullYear())).slice(-2)}`;
 }
 
+let peSelectedPhotoDataUrl = null; // pending replacement photo for the visit being edited
+
 function openPhotoEditModal(visitId){
   const v = STATE.visits[visitId];
   if(!v) return;
+  peSelectedPhotoDataUrl = null;
+  document.getElementById('peNewPhoto').value = '';
   document.getElementById('peVisitId').value = visitId;
   document.getElementById('peImg').src = v.photoUrl;
   document.getElementById('peDate').value = v.visitDate || '';
@@ -2108,7 +2116,15 @@ function openPhotoEditModal(visitId){
   document.querySelectorAll('#peCareActivitiesGroup input[type=checkbox]').forEach(cb=>{ cb.checked = checkedActivities.includes(cb.value); });
   document.getElementById('photoEditModal').classList.add('show');
 }
+document.getElementById('peNewPhoto').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const dataUrl = await resizeImageFile(file);
+  peSelectedPhotoDataUrl = dataUrl;
+  document.getElementById('peImg').src = dataUrl; // preview replacement immediately
+});
 document.getElementById('peCancelBtn').addEventListener('click', ()=>{
+  peSelectedPhotoDataUrl = null;
   document.getElementById('photoEditModal').classList.remove('show');
 });
 document.getElementById('peSaveBtn').addEventListener('click', async ()=>{
@@ -2131,9 +2147,26 @@ document.getElementById('peSaveBtn').addEventListener('click', async ()=>{
     adlScoreVisit: document.getElementById('peAdlScoreVisit').value.trim(),
     careActivities: Array.from(document.querySelectorAll('#peCareActivitiesGroup input[type=checkbox]:checked')).map(cb=>cb.value)
   };
-  await visitsRef.child(id).update({ visitDate: date, note, vitalSigns, careAssessment });
-  document.getElementById('photoEditModal').classList.remove('show');
-  showToast('บันทึกการแก้ไขเรียบร้อย','success');
+  const peSaveBtn = document.getElementById('peSaveBtn');
+  peSaveBtn.disabled = true;
+  const originalLabel = peSaveBtn.textContent;
+  try{
+    const updateData = { visitDate: date, note, vitalSigns, careAssessment };
+    if(peSelectedPhotoDataUrl){
+      peSaveBtn.textContent = '⏳ กำลังอัปโหลดรูปใหม่...';
+      updateData.photoUrl = await uploadToImgbb(peSelectedPhotoDataUrl);
+    }
+    await visitsRef.child(id).update(updateData);
+    peSelectedPhotoDataUrl = null;
+    document.getElementById('photoEditModal').classList.remove('show');
+    showToast('บันทึกการแก้ไขเรียบร้อย','success');
+  } catch(err){
+    console.error(err);
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+  } finally {
+    peSaveBtn.disabled = false;
+    peSaveBtn.textContent = originalLabel;
+  }
 });
 
 function openSelectVisitModal(eid){
@@ -2237,11 +2270,9 @@ function bindRecordTabEvents(){
     if(files.length === 0) return;
     const thumbsBox = document.getElementById('recThumbs');
     thumbsBox.innerHTML = '<span style="font-size:0.8rem;color:var(--muted);">กำลังประมวลผลรูปภาพ...</span>';
-    recSelectedPhotos = [];
-    for(const file of files){
-      const dataUrl = await resizeImageFile(file);
-      recSelectedPhotos.push({ file, dataUrl });
-    }
+    const file = files[0];
+    const dataUrl = await resizeImageFile(file);
+    recSelectedPhotos = [{ file, dataUrl }];
     thumbsBox.innerHTML = recSelectedPhotos.map(p=>`<img src="${p.dataUrl}">`).join('');
   });
 
@@ -2347,10 +2378,6 @@ async function saveVisitRecords(){
   if(!cgCode || !elderlyId){ showToast('กรุณาเลือก CG และผู้สูงอายุ','error'); return; }
   if(recSelectedDates.length === 0){ showToast('กรุณาเลือกวันที่เยี่ยม','error'); return; }
   if(recSelectedPhotos.length === 0){ showToast('กรุณาอัปโหลดรูปภาพ','error'); return; }
-  if(recSelectedPhotos.length !== recSelectedDates.length){
-    showToast(`จำนวนรูป (${recSelectedPhotos.length}) ต้องเท่ากับจำนวนวันที่เลือก (${recSelectedDates.length})`, 'error');
-    return;
-  }
   const e = STATE.elderly[elderlyId];
   const cg = STATE.cgs[cgCode];
   const note = document.getElementById('recNote').value.trim();
@@ -2370,13 +2397,14 @@ async function saveVisitRecords(){
   const saveBtn = document.getElementById('saveVisitBtn');
   saveBtn.disabled = true;
   const progressText = document.getElementById('uploadProgressText');
-  const total = recSelectedPhotos.length;
+  const total = shuffledDates.length;
   const updates = {};
 
   try{
+    progressText.textContent = `กำลังอัปโหลดรูปภาพ...`;
+    const url = await uploadToImgbb(recSelectedPhotos[0].dataUrl);
     for(let i=0;i<total;i++){
-      progressText.textContent = `กำลังอัปโหลด... ${i+1}/${total}`;
-      const url = await uploadToImgbb(recSelectedPhotos[i].dataUrl);
+      progressText.textContent = `กำลังบันทึก... ${i+1}/${total}`;
       const visitId = 'V' + Date.now() + '_' + i;
       updates[visitId] = {
         visitDate: shuffledDates[i],
