@@ -312,6 +312,15 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 .pdfpage .pt-cell img{width:100%;object-fit:cover;border-radius:4px;border:1px solid #ddd;}
 .pdfpage .pt-cell .d{font-size:12px;color:#333;margin-top:4px;}
 .pdfpage .pt-footer{position:absolute;bottom:20px;left:30px;right:30px;text-align:center;font-size:11px;color:#555;border-top:1px solid #ddd;padding-top:8px;}
+.pdfpage .sm-info{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;color:#222;}
+.pdfpage .sm-info td{padding:3px 6px;border:1px solid #ddd;vertical-align:top;}
+.pdfpage .sm-info td.k{background:#faf3f7;font-weight:600;white-space:nowrap;width:110px;}
+.pdfpage .sm-count{margin-top:10px;font-size:12.5px;font-weight:600;color:#111;}
+.pdfpage .sm-table{width:100%;border-collapse:collapse;margin-top:8px;table-layout:fixed;}
+.pdfpage .sm-table th{background:var(--primary-light);color:#7a2c52;font-size:10.5px;font-weight:700;padding:5px 6px;border:1px solid #e3c3d5;text-align:left;}
+.pdfpage .sm-table td{font-size:10px;line-height:1.45;padding:5px 6px;border:1px solid #e3c3d5;vertical-align:top;word-break:break-word;}
+.pdfpage .sm-table td.sm-date{font-weight:700;white-space:nowrap;width:52px;}
+.pdfpage .sm-empty{margin-top:30px;text-align:center;color:#999;font-size:13px;}
 
 /* ===================== AUTH SCREEN ===================== */
 .auth-overlay{
@@ -754,6 +763,13 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
   <div class="tab-panel" id="tab-pdf">
     <div class="card">
       <h2>📄 สร้างไฟล์ PDF สรุปการเยี่ยม</h2>
+      <div class="field">
+        <label>รูปแบบรายงาน</label>
+        <div class="checkbox-group" style="flex-direction:row;flex-wrap:wrap;gap:16px;">
+          <label class="checkbox-item"><input type="radio" name="pdfReportType" id="pdfTypeSummary" value="summary" checked> สรุปผลการเยี่ยม (ตาราง 1 คน/แผ่น)</label>
+          <label class="checkbox-item"><input type="radio" name="pdfReportType" id="pdfTypePhoto" value="photo"> อัลบั้มภาพกิจกรรม</label>
+        </div>
+      </div>
       <div class="row">
         <div class="field">
           <label>เดือน</label>
@@ -3001,6 +3017,7 @@ async function generatePdf(){
   const month = parseInt(document.getElementById('pdfMonth').value, 10);
   const gy = ceYear(be);
   const cgFilter = document.getElementById('pdfCgFilter').value;
+  const reportType = (document.querySelector('input[name=pdfReportType]:checked')||{}).value || 'summary';
   const progressText = document.getElementById('pdfProgressText');
   const btn = document.getElementById('generatePdfBtn');
 
@@ -3030,15 +3047,23 @@ async function generatePdf(){
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
 
-  // build page list: [{elderlyId, photos:[...]}]
+  // build page list
   const pages = [];
-  elderlyIdsSorted.forEach(eid=>{
-    const e = STATE.elderly[eid] || { name: eid, pdfMode:'normal' };
-    const list = byElderly[eid];
-    const chunkSize = e.pdfMode === 'obt' ? 12 : 4;
-    const chunks = chunkArray(list, chunkSize);
-    chunks.forEach(chunk=> pages.push({ elderly: e, photos: chunk, allDays: list.map(v=> new Date(v.visitDate).getDate()) }));
-  });
+  if(reportType === 'summary'){
+    // visit-summary report: exactly 1 page per elderly person, regardless of visit count
+    elderlyIdsSorted.forEach(eid=>{
+      const e = STATE.elderly[eid] || { name: eid };
+      pages.push({ elderly: e, visits: byElderly[eid] });
+    });
+  } else {
+    elderlyIdsSorted.forEach(eid=>{
+      const e = STATE.elderly[eid] || { name: eid, pdfMode:'normal' };
+      const list = byElderly[eid];
+      const chunkSize = e.pdfMode === 'obt' ? 12 : 4;
+      const chunks = chunkArray(list, chunkSize);
+      chunks.forEach(chunk=> pages.push({ elderly: e, photos: chunk, allDays: list.map(v=> new Date(v.visitDate).getDate()) }));
+    });
+  }
 
   btn.disabled = true;
   const renderRoot = document.getElementById('pdfRender');
@@ -3049,7 +3074,9 @@ async function generatePdf(){
     for(let i=0;i<pages.length;i++){
       progressText.textContent = `กำลังสร้างหน้า ${i+1}/${pages.length}`;
       const page = pages[i];
-      const pageEl = buildPdfPageElement(page, month, be);
+      const pageEl = reportType === 'summary'
+        ? buildSummaryPageElement(page, month, be)
+        : buildPdfPageElement(page, month, be);
       renderRoot.innerHTML = '';
       renderRoot.appendChild(pageEl);
       await new Promise(r=>setTimeout(r, 320)); // allow images to load
@@ -3058,7 +3085,8 @@ async function generatePdf(){
       if(i > 0) doc.addPage();
       doc.addImage(imgData, 'JPEG', 0, 0, 210, 297);
     }
-    const filename = `สรุปการเยี่ยม_${THAI_MONTHS[month]}${be}.pdf`;
+    const prefix = reportType === 'summary' ? 'สรุปการเยี่ยม' : 'ภาพกิจกรรมเยี่ยม';
+    const filename = `${prefix}_${THAI_MONTHS[month]}${be}.pdf`;
     doc.save(filename);
     showToast('สร้างไฟล์ PDF เรียบร้อย','success');
   } catch(err){
@@ -3069,6 +3097,76 @@ async function generatePdf(){
     progressText.textContent = '';
     btn.disabled = false;
   }
+}
+
+function buildSummaryPageElement(page, month, be){
+  const e = page.elderly || {};
+  const visits = (page.visits || []).slice().sort((a,b)=> new Date(a.visitDate) - new Date(b.visitDate));
+  const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : (e.cgCode || '-');
+  const monthLabel = THAI_MONTHS[month];
+  const wrap = document.createElement('div');
+  wrap.className = 'pdfpage';
+
+  const adlGroupLabel = e.adlGroup ? `กลุ่ม ${e.adlGroup}` : '-';
+  wrap.innerHTML = `
+    <div class="pt-title">สรุปผลการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+    <div class="pt-sub">ประจำเดือน ${monthLabel} ${be}</div>
+    <table class="sm-info">
+      <tr><td class="k">ชื่อ-สกุล</td><td>${escapeHtml(e.name||'-')}</td><td class="k">อายุ</td><td>${e.age||'-'} ปี</td></tr>
+      <tr><td class="k">HN</td><td>${escapeHtml(e.hn||'-')}</td><td class="k">เลขบัตรประชาชน</td><td>${escapeHtml(e.idCard||'-')}</td></tr>
+      <tr><td class="k">ที่อยู่</td><td>บ้านเลขที่ ${escapeHtml(e.houseNo||'-')} หมู่ ${escapeHtml(e.moo||'-')}</td><td class="k">กลุ่ม/คะแนน ADL</td><td>${adlGroupLabel} (${e.adlScore ?? '-'} คะแนน)</td></tr>
+      <tr><td class="k">ผู้ดูแล (CG)</td><td colspan="3">${escapeHtml(cgName)}</td></tr>
+    </table>
+    <div class="sm-count">จำนวนครั้งที่เยี่ยมในเดือนนี้: ${visits.length} ครั้ง</div>
+  `;
+
+  if(visits.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'sm-empty';
+    empty.textContent = 'ไม่มีข้อมูลการเยี่ยมในเดือนนี้';
+    wrap.appendChild(empty);
+  } else {
+    const table = document.createElement('table');
+    table.className = 'sm-table';
+    const rows = visits.map(v=>{
+      const vs = v.vitalSigns || {};
+      const ca = v.careAssessment || {};
+      const vitalParts = [
+        vs.bp ? `BP ${vs.bp}` : '',
+        vs.pr ? `PR ${vs.pr}` : '',
+        vs.rr ? `RR ${vs.rr}` : '',
+        vs.temp ? `T ${vs.temp}` : ''
+      ].filter(Boolean).join('<br>') || '-';
+      const careParts = [
+        ca.medication ? `ยา: ${ca.medication}` : '',
+        ca.dailyCare ? `กิจวัตร: ${ca.dailyCare}` : '',
+        ca.excretion ? `ขับถ่าย: ${ca.excretion}` : '',
+        (ca.feedingMethod || ca.foodType) ? `อาหาร: ${[ca.feedingMethod, ca.foodType].filter(Boolean).join(' / ')}` : '',
+        ca.adlScoreVisit ? `ADL: ${ca.adlScoreVisit}` : ''
+      ].filter(Boolean).map(escapeHtml).join('<br>') || '-';
+      const activities = (ca.careActivities || []).map(escapeHtml).join('<br>');
+      const noteLine = v.note ? `${activities?'<br>':''}หมายเหตุ: ${escapeHtml(v.note)}` : '';
+      const actCell = (activities || noteLine) ? (activities + noteLine) : '-';
+      const dateLabel = v.visitDate ? formatThaiDateShort(v.visitDate) : '-';
+      return `<tr>
+        <td class="sm-date">${dateLabel}</td>
+        <td>${vitalParts}</td>
+        <td>${careParts}</td>
+        <td>${actCell}</td>
+      </tr>`;
+    }).join('');
+    table.innerHTML = `
+      <thead><tr><th>วันที่</th><th>สัญญาณชีพ</th><th>การประเมิน/ดูแล</th><th>กิจกรรม/หมายเหตุ</th></tr></thead>
+      <tbody>${rows}</tbody>
+    `;
+    wrap.appendChild(table);
+  }
+
+  const footer = document.createElement('div');
+  footer.className = 'pt-footer';
+  footer.textContent = `CG: ${cgName} | รพ.สต.บ้านนายอ`;
+  wrap.appendChild(footer);
+  return wrap;
 }
 
 function buildPdfPageElement(page, month, be){
