@@ -259,6 +259,27 @@ tr:hover td{background:#fdf6fa;}
 .modal-box h3{margin:0 0 14px;font-size:1.05rem;color:var(--primary-dark);}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
+.pdf-preview-overlay{
+  position:fixed;inset:0;background:rgba(15,30,25,0.75);
+  display:none;align-items:center;justify-content:center;z-index:300;padding:16px;
+}
+.pdf-preview-overlay.show{display:flex;}
+.pdf-preview-box{
+  background:#fff;border-radius:14px;width:100%;max-width:960px;height:92vh;
+  box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;
+}
+.pdf-preview-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid #e5e7eb;flex:0 0 auto;
+}
+.pdf-preview-header h3{margin:0;font-size:1rem;color:var(--primary-dark);}
+.pdf-preview-body{flex:1 1 auto;position:relative;background:#525659;}
+.pdf-preview-body iframe{width:100%;height:100%;border:none;display:block;}
+.pdf-preview-close-btn{
+  background:none;border:none;font-size:1.4rem;line-height:1;cursor:pointer;
+  color:var(--primary-dark);padding:4px 8px;
+}
+
 .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:10px 0;}
 .calendar-grid .dow{text-align:center;font-size:0.7rem;color:var(--muted);font-weight:700;}
 .calendar-grid .day{
@@ -412,7 +433,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <button class="tab-btn" data-tab="cg" data-auth="1">👥 จัดการ CG</button>
     <button class="tab-btn" data-tab="elderly" data-auth="1">👴 จัดการผู้สูงอายุ</button>
     <button class="tab-btn" data-tab="ltc" data-auth="1">🧺 สิ่งของสนับสนุนจากโครงการ LTC ปี 69</button>
-    <button class="tab-btn" data-tab="pdf" data-auth="1">📄 สร้าง PDF</button>
+    <button class="tab-btn" data-tab="pdf" data-auth="1">📄 รายงานผลงาน CG</button>
     <button class="tab-btn" data-tab="users" id="usersTabBtn" data-auth="1" style="display:none;">🔐 จัดการผู้ใช้</button>
   </div>
 </div>
@@ -489,20 +510,6 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
     <!-- ================= END สรุปข้อมูลผู้สูงอายุ ================= -->
 
-    <div class="card">
-      <h2>👥 ตารางสถานะ CG รายเดือน</h2>
-      <div class="table-wrap">
-        <table id="cgStatusTable"><thead><tr>
-          <th>CG</th><th>ผู้สูงอายุในดูแล</th><th>เยี่ยมแล้ว</th><th>ความคืบหน้า</th>
-        </tr></thead><tbody></tbody></table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>📂 ดูข้อมูลที่บันทึก</h2>
-      <div class="breadcrumb" id="drillBreadcrumb"></div>
-      <div id="drillContent"></div>
-    </div>
   </div>
 
   <!-- TAB 2: RECORD VISIT -->
@@ -785,8 +792,23 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
           <select id="pdfCgFilter"><option value="">ทุก CG</option></select>
         </div>
       </div>
-      <button class="btn btn-primary" id="generatePdfBtn">📥 สร้างและดาวน์โหลด PDF</button>
+      <button class="btn btn-primary" id="generatePdfBtn">📄 สร้างและดูตัวอย่าง PDF</button>
       <div class="upload-progress-text" id="pdfProgressText"></div>
+    </div>
+
+    <div class="card">
+      <h2>👥 ตารางสถานะ CG รายเดือน</h2>
+      <div class="table-wrap">
+        <table id="cgStatusTable"><thead><tr>
+          <th>CG</th><th>ผู้สูงอายุในดูแล</th><th>เยี่ยมแล้ว</th><th>ความคืบหน้า</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📂 ดูข้อมูลที่บันทึก</h2>
+      <div class="breadcrumb" id="drillBreadcrumb"></div>
+      <div id="drillContent"></div>
     </div>
   </div>
 
@@ -805,6 +827,19 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
   </div>
 
+</div>
+
+<!-- PDF Preview Modal -->
+<div class="pdf-preview-overlay" id="pdfPreviewModal">
+  <div class="pdf-preview-box">
+    <div class="pdf-preview-header">
+      <h3 id="pdfPreviewTitle">📄 ตัวอย่างรายงาน PDF</h3>
+      <button class="pdf-preview-close-btn" id="pdfPreviewCloseBtn" type="button" title="ปิด">✕</button>
+    </div>
+    <div class="pdf-preview-body">
+      <iframe id="pdfPreviewFrame" title="ตัวอย่างรายงาน PDF"></iframe>
+    </div>
+  </div>
 </div>
 
 <!-- LTC Poster Modal -->
@@ -3117,7 +3152,8 @@ async function generatePdf(){
     }
     const prefix = reportType === 'summary' ? 'สรุปการเยี่ยม' : 'ภาพกิจกรรมเยี่ยม';
     const filename = `${prefix}_${THAI_MONTHS[month]}${be}.pdf`;
-    doc.save(filename);
+    doc.setProperties({ title: filename });
+    openPdfPreview(doc, filename);
     showToast('สร้างไฟล์ PDF เรียบร้อย','success');
   } catch(err){
     console.error(err);
@@ -3128,6 +3164,29 @@ async function generatePdf(){
     btn.disabled = false;
   }
 }
+
+const PDF_PREVIEW = { url:null, filename:'' };
+
+function openPdfPreview(doc, filename){
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  PDF_PREVIEW.url = url;
+  PDF_PREVIEW.filename = filename;
+  document.getElementById('pdfPreviewTitle').textContent = `📄 ${filename}`;
+  document.getElementById('pdfPreviewFrame').src = url;
+  document.getElementById('pdfPreviewModal').classList.add('show');
+}
+
+function closePdfPreview(){
+  document.getElementById('pdfPreviewModal').classList.remove('show');
+  document.getElementById('pdfPreviewFrame').src = '';
+  if(PDF_PREVIEW.url){ URL.revokeObjectURL(PDF_PREVIEW.url); PDF_PREVIEW.url = null; }
+}
+
+document.getElementById('pdfPreviewCloseBtn').addEventListener('click', closePdfPreview);
+document.getElementById('pdfPreviewModal').addEventListener('click', (e)=>{
+  if(e.target.id === 'pdfPreviewModal') closePdfPreview();
+});
 
 function buildSummaryPageElement(page, month, be){
   const e = page.elderly || {};
