@@ -2329,7 +2329,7 @@ function updateRecInfoCard(){
     const visited = Object.values(STATE.visits || {}).filter(v=>{
       if(v.elderlyId !== eid || !v.visitDate) return false;
       const d = new Date(v.visitDate);
-      return d.getFullYear() === gy && (d.getMonth()+1) === m;
+      return d.getFullYear() === gy && d.getMonth() === m;
     }).length;
     const remaining = Math.max(required - visited, 0);
     const pillClass = remaining === 0 ? 'visit-status-pill ok' : 'visit-status-pill';
