@@ -810,7 +810,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       <h2>👥 ตารางสถานะ CG รายเดือน</h2>
       <div class="table-wrap">
         <table id="cgStatusTable"><thead><tr>
-          <th>CG</th><th>ผู้สูงอายุในดูแล</th><th>เยี่ยมแล้ว</th><th>ความคืบหน้า</th>
+          <th>CG</th><th>ผู้สูงอายุในดูแล</th><th>ต้องเยี่ยม (ครั้ง)</th><th>เยี่ยมแล้ว (ครั้ง)</th><th>คงเหลือ (ครั้ง)</th><th>ความคืบหน้า</th>
         </tr></thead><tbody></tbody></table>
       </div>
     </div>
@@ -2023,17 +2023,25 @@ function renderDashboard(){
   // Card 3: CG status table
   const tbody = document.querySelector('#cgStatusTable tbody');
   if(cgIds.length === 0){
-    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">ยังไม่มีข้อมูล CG</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">ยังไม่มีข้อมูล CG</td></tr>`;
   } else {
     tbody.innerHTML = cgIds.sort().map(cgId=>{
       const cg = STATE.cgs[cgId];
       const elderlyOfCg = elderlyIds.filter(id=>STATE.elderly[id].cgCode === cgId);
-      const visitedOfCg = elderlyOfCg.filter(id=>elderlyVisitedThisMonthIds.has(id));
-      const pct = elderlyOfCg.length ? Math.round(visitedOfCg.length / elderlyOfCg.length * 100) : 0;
+      const elderlyOfCgSet = new Set(elderlyOfCg);
+      const visitedPersonsOfCg = elderlyOfCg.filter(id=>elderlyVisitedThisMonthIds.has(id));
+      const requiredOfCg = elderlyOfCg.reduce((sum,id)=> sum + (REQUIRED_VISITS_BY_ADL_GROUP[STATE.elderly[id].adlGroup] || 0), 0);
+      const visitedCountOfCg = visitsThisMonth.filter(v=> elderlyOfCgSet.has(v.elderlyId)).length;
+      const remainingOfCg = Math.max(requiredOfCg - visitedCountOfCg, 0);
+      const pct = requiredOfCg
+        ? Math.min(Math.round(visitedCountOfCg / requiredOfCg * 100), 100)
+        : (elderlyOfCg.length ? Math.round(visitedPersonsOfCg.length / elderlyOfCg.length * 100) : 0);
       return `<tr>
         <td>${escapeHtml(cg.name)} <span class="badge gray">${cgId}</span></td>
         <td>${elderlyOfCg.length}</td>
-        <td>${visitedOfCg.length}</td>
+        <td>${requiredOfCg}</td>
+        <td>${visitedCountOfCg}</td>
+        <td>${remainingOfCg}</td>
         <td style="min-width:140px;">
           <div class="row" style="gap:6px;align-items:center;">
             <div class="progress-outer" style="flex:1;"><div class="progress-inner" style="width:${pct}%;"></div></div>
