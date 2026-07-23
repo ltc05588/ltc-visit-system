@@ -307,6 +307,15 @@ tr:hover td{background:#fdf6fa;}
 .visit-status-pill{background:var(--danger-light);color:var(--danger);border-radius:10px;padding:10px 14px;font-size:0.85rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .visit-status-pill.ok{background:#e6f7ee;color:#1b8a4c;}
 .visit-status-pill .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:0 0 auto;}
+.visit-report{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;}
+.visit-report-title{font-size:0.88rem;font-weight:700;color:var(--primary-dark);margin-bottom:10px;}
+.visit-report-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px;}
+.visit-report-stat{background:var(--primary-light);border-radius:8px;padding:8px;text-align:center;}
+.visit-report-stat .num{font-size:1.25rem;font-weight:700;color:var(--primary-dark);}
+.visit-report-stat .lbl{font-size:0.72rem;color:var(--muted);}
+.visit-report-stat.done{background:#e6f7ee;}.visit-report-stat.done .num{color:#1b8a4c;}
+.visit-report-stat.remaining{background:var(--danger-light);}.visit-report-stat.remaining .num{color:var(--danger);}
+.visit-report-note{font-size:0.75rem;color:var(--muted);margin-top:7px;}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
 .thumbs img{width:66px;height:66px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
 .section-actions{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
@@ -527,6 +536,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
         </div>
       </div>
       <div id="recInfoCard"></div>
+      <div id="recMonthlyReport"></div>
 
       <div class="field">
         <label>3. วันที่เยี่ยม</label>
@@ -2248,6 +2258,7 @@ function populateElderlySelectsForRecordTab(){
   const cgSel = document.getElementById('recCg');
   const elderlySel = document.getElementById('recElderly');
   if(!cgSel || !elderlySel) return;
+  renderRecMonthlyReport();
   const chosenCg = cgSel.value;
   if(!chosenCg){
     elderlySel.innerHTML = '<option value="">-- เลือก CG ก่อน --</option>';
@@ -2263,9 +2274,48 @@ function populateElderlySelectsForRecordTab(){
 
 const REQUIRED_VISITS_BY_ADL_GROUP = { 1: 2, 2: 4, 3: 8, 4: 8 };
 
+function renderRecMonthlyReport(){
+  const box = document.getElementById('recMonthlyReport');
+  const be = parseInt(document.getElementById('recYear').value, 10);
+  const month = parseInt(document.getElementById('recMonth').value, 10);
+  const cgCode = document.getElementById('recCg').value;
+  if(!box || !Number.isFinite(be) || !Number.isFinite(month)){ return; }
+
+  const elderlyIds = Object.keys(STATE.elderly || {}).filter(id=>
+    !cgCode || STATE.elderly[id].cgCode === cgCode
+  );
+  const required = elderlyIds.reduce((sum, id)=>
+    sum + (REQUIRED_VISITS_BY_ADL_GROUP[STATE.elderly[id].adlGroup] || 0), 0
+  );
+  const elderlyIdSet = new Set(elderlyIds);
+  const gy = ceYear(be);
+  const visited = Object.values(STATE.visits || {}).filter(v=>{
+    if(!elderlyIdSet.has(v.elderlyId) || !v.visitDate) return false;
+    const date = new Date(v.visitDate);
+    return date.getFullYear() === gy && date.getMonth() === month;
+  }).length;
+  const remaining = Math.max(required - visited, 0);
+  const progress = required ? Math.min(Math.round(visited / required * 100), 100) : 0;
+  const scope = cgCode
+    ? `CG: ${escapeHtml((STATE.cgs[cgCode] || {}).name || cgCode)}`
+    : 'ทุก CG';
+
+  box.innerHTML = `<div class="visit-report">
+    <div class="visit-report-title">📊 รายงานผลการเยี่ยมประจำเดือน ${THAI_MONTHS[month]} ${be}</div>
+    <div class="visit-report-grid">
+      <div class="visit-report-stat"><div class="num">${required}</div><div class="lbl">ต้องเยี่ยม (ครั้ง)</div></div>
+      <div class="visit-report-stat done"><div class="num">${visited}</div><div class="lbl">เยี่ยมแล้ว (ครั้ง)</div></div>
+      <div class="visit-report-stat remaining"><div class="num">${remaining}</div><div class="lbl">คงเหลือ (ครั้ง)</div></div>
+    </div>
+    <div class="progress-outer"><div class="progress-inner" style="width:${progress}%;"></div></div>
+    <div class="visit-report-note">ขอบเขต: ${scope} · ผู้สูงอายุ ${elderlyIds.length} คน · ความคืบหน้า ${progress}%</div>
+  </div>`;
+}
+
 function updateRecInfoCard(){
   const eid = document.getElementById('recElderly').value;
   const box = document.getElementById('recInfoCard');
+  renderRecMonthlyReport();
   if(!eid || !STATE.elderly[eid]){ box.innerHTML = ''; return; }
   const e = STATE.elderly[eid];
   const infoHtml = `<div class="info-card">ℹ️ <strong>${escapeHtml(e.name)}</strong> — โหมด PDF: <strong>${e.pdfMode === 'obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)'}</strong> | อายุ ${e.age||'-'} ปี | ADL กลุ่ม ${e.adlGroup||'-'}</div>`;
@@ -2274,7 +2324,7 @@ function updateRecInfoCard(){
   const be = parseInt(document.getElementById('recYear').value, 10);
   const m = parseInt(document.getElementById('recMonth').value, 10);
   let statusHtml = '';
-  if(required > 0 && be && m){
+  if(required > 0 && Number.isFinite(be) && Number.isFinite(m)){
     const gy = ceYear(be);
     const visited = Object.values(STATE.visits || {}).filter(v=>{
       if(v.elderlyId !== eid || !v.visitDate) return false;
