@@ -971,6 +971,22 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       </div>
     </div>
     <div class="field">
+      <label>ครุภัณฑ์ที่ยืมจาก รพ.สต.</label>
+      <div class="checkbox-group" id="elderlyEquipmentBorrowGroup">
+        <label class="checkbox-item"><input type="checkbox" value="ไม่ได้ยืม"> ไม่ได้ยืม</label>
+        <label class="checkbox-item"><input type="checkbox" value="เตียงผู้ป่วยแบบธรรมดา"> เตียงผู้ป่วยแบบธรรมดา</label>
+        <label class="checkbox-item"><input type="checkbox" value="เตียง 3 ไกด์"> เตียง 3 ไกด์</label>
+        <label class="checkbox-item"><input type="checkbox" value="ที่นอนลม"> ที่นอนลม</label>
+        <label class="checkbox-item"><input type="checkbox" value="เครื่องผลิตออกซิเจน 5 ลิตร"> เครื่องผลิตออกซิเจน 5 ลิตร</label>
+        <label class="checkbox-item"><input type="checkbox" value="รถเข็นผู้ป่วยชนิดนั่ง"> รถเข็นผู้ป่วยชนิดนั่ง</label>
+        <label class="checkbox-item"><input type="checkbox" value="รถเข็นแบบคันโยก"> รถเข็นแบบคันโยก</label>
+        <label class="checkbox-item"><input type="checkbox" value="เครื่องซักชั่น(ดูดเสมหะ)"> เครื่องซักชั่น(ดูดเสมหะ)</label>
+        <label class="checkbox-item"><input type="checkbox" value="อื่นๆ"> อื่นๆ โปรดระบุ</label>
+      </div>
+      <input type="text" id="elderlyEquipmentOtherText" placeholder="โปรดระบุ" style="margin-top:6px;display:none;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
+      <div id="elderlyEquipmentDatesContainer" style="margin-top:10px;display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+    <div class="field">
       <label>รูปภาพผู้สูงอายุ (ขนาด 1200 x 675 px)</label>
       <input type="file" id="elderlyPhotoInput" accept="image/*">
       <div id="elderlyPhotoPreviewWrap" style="margin-top:8px;display:none;">
@@ -2260,6 +2276,7 @@ document.getElementById('selectVisitCancelBtn').addEventListener('click', ()=>{
 let recSelectedDates = [];
 let recSelectedPhotos = []; // {file, dataUrl}
 let elderlySelectedPhotoDataUrl = null; // pending new/updated elderly profile photo
+let elderlyEquipmentDatesTemp = {}; // {itemValue: {borrowDate, returnDate}} while elderly modal is open
 let cgSelectedPhotoDataUrl = null; // pending new/updated CG photo
 
 function populateElderlySelectsForRecordTab(){
@@ -2965,6 +2982,21 @@ function bindElderlyTabEvents(){
     document.getElementById('elderlyPhotoPreview').src = elderlySelectedPhotoDataUrl;
     previewWrap.style.display = 'block';
   });
+  document.getElementById('elderlyEquipmentBorrowGroup').addEventListener('change', (ev)=>{
+    syncEquipmentDatesFromDom();
+    const group = document.getElementById('elderlyEquipmentBorrowGroup');
+    const noneCb = group.querySelector('input[value="ไม่ได้ยืม"]');
+    if(ev.target === noneCb && noneCb.checked){
+      group.querySelectorAll('input[type=checkbox]').forEach(cb=>{ if(cb !== noneCb) cb.checked = false; });
+    } else if(ev.target.checked && ev.target !== noneCb){
+      noneCb.checked = false;
+    }
+    const otherCb = group.querySelector('input[value="อื่นๆ"]');
+    const otherText = document.getElementById('elderlyEquipmentOtherText');
+    otherText.style.display = otherCb.checked ? 'block' : 'none';
+    if(!otherCb.checked) otherText.value = '';
+    renderEquipmentDateRows();
+  });
   document.getElementById('elderlyDetailCloseBtn').addEventListener('click', ()=>document.getElementById('elderlyDetailModal').classList.remove('show'));
   document.getElementById('elderlyDetailEditBtn').addEventListener('click', ()=>{
     const eid = document.getElementById('elderlyDetailModal').dataset.currentEid;
@@ -3000,10 +3032,53 @@ function openElderlyDetailModal(eid){
     ${row('ปัญหาสุขภาพ', escapeHtml(e.healthProblem||'-'))}
     ${row('ความต้องการ', escapeHtml(e.need||'-'))}
     ${row('สิ่งของสนับสนุนจากโครงการ LTC', (e.ltcSupport && e.ltcSupport.length) ? escapeHtml(e.ltcSupport.join(', ')) : '-')}
+    ${row('ครุภัณฑ์ที่ยืมจาก รพ.สต.', formatEquipmentBorrow(e.equipmentBorrow))}
     ${row('CG ผู้ดูแล', escapeHtml(cgName))}
     ${row('โหมด PDF', e.pdfMode==='obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)')}
   `;
   document.getElementById('elderlyDetailModal').classList.add('show');
+}
+
+function syncEquipmentDatesFromDom(){
+  document.querySelectorAll('#elderlyEquipmentDatesContainer .equipment-date-row').forEach(rowEl=>{
+    const item = rowEl.dataset.item;
+    const b = rowEl.querySelector('.eq-borrow-date').value;
+    const r = rowEl.querySelector('.eq-return-date').value;
+    elderlyEquipmentDatesTemp[item] = { borrowDate: b, returnDate: r };
+  });
+}
+
+function renderEquipmentDateRows(){
+  const group = document.getElementById('elderlyEquipmentBorrowGroup');
+  const selected = Array.from(group.querySelectorAll('input[type=checkbox]:checked'))
+    .map(cb=>cb.value).filter(v=>v !== 'ไม่ได้ยืม');
+  const container = document.getElementById('elderlyEquipmentDatesContainer');
+  container.innerHTML = selected.map(item=>{
+    const d = elderlyEquipmentDatesTemp[item] || {};
+    return `
+    <div class="equipment-date-row" data-item="${escapeHtml(item)}" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
+      <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">${escapeHtml(item)}</div>
+      <div class="row">
+        <div class="field"><label>วันที่ยืม</label><input type="date" class="eq-borrow-date" value="${d.borrowDate||''}"></div>
+        <div class="field"><label>วันที่คืน</label><input type="date" class="eq-return-date" value="${d.returnDate||''}"></div>
+      </div>
+    </div>`;
+  }).join('');
+  container.querySelectorAll('input[type=date]').forEach(inp=>{
+    inp.addEventListener('change', syncEquipmentDatesFromDom);
+  });
+}
+
+function formatEquipmentBorrow(eb){
+  if(!eb || !eb.items || !eb.items.length) return '-';
+  if(eb.items.includes('ไม่ได้ยืม')) return 'ไม่ได้ยืม';
+  const parts = eb.items.map(item=>{
+    const label = (item === 'อื่นๆ' && eb.otherText) ? `อื่นๆ: ${escapeHtml(eb.otherText)}` : escapeHtml(item);
+    const d = (eb.dates && eb.dates[item]) || {};
+    const dateStr = (d.borrowDate || d.returnDate) ? ` (ยืม ${d.borrowDate||'-'} / คืน ${d.returnDate||'-'})` : '';
+    return label + dateStr;
+  });
+  return parts.join('<br>');
 }
 
 function openElderlyModal(eid){
@@ -3032,6 +3107,14 @@ function openElderlyModal(eid){
     document.getElementById('elderlyNeed').value = e.need || '';
     { const ltcSel = e.ltcSupport || [];
       document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]').forEach(cb=>{ cb.checked = ltcSel.includes(cb.value); }); }
+    { const eb = e.equipmentBorrow || {};
+      const eqSel = eb.items || [];
+      document.querySelectorAll('#elderlyEquipmentBorrowGroup input[type=checkbox]').forEach(cb=>{ cb.checked = eqSel.includes(cb.value); });
+      const otherText = document.getElementById('elderlyEquipmentOtherText');
+      otherText.value = eb.otherText || '';
+      otherText.style.display = eqSel.includes('อื่นๆ') ? 'block' : 'none';
+      elderlyEquipmentDatesTemp = JSON.parse(JSON.stringify(eb.dates || {}));
+      renderEquipmentDateRows(); }
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
     document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
     if(e.photoUrl){ previewImg.src = e.photoUrl; previewWrap.style.display = 'block'; }
@@ -3051,6 +3134,11 @@ function openElderlyModal(eid){
     document.getElementById('elderlyHealthProblem').value = '';
     document.getElementById('elderlyNeed').value = '';
     document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
+    document.querySelectorAll('#elderlyEquipmentBorrowGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
+    document.getElementById('elderlyEquipmentOtherText').value = '';
+    document.getElementById('elderlyEquipmentOtherText').style.display = 'none';
+    elderlyEquipmentDatesTemp = {};
+    renderEquipmentDateRows();
     document.getElementById('elderlyPdfMode').value = 'normal';
     previewImg.src = ''; previewWrap.style.display = 'none';
   }
@@ -3087,6 +3175,19 @@ async function saveElderly(){
       healthProblem: document.getElementById('elderlyHealthProblem').value.trim().slice(0,100),
       need: document.getElementById('elderlyNeed').value.trim().slice(0,100),
       ltcSupport: Array.from(document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]:checked')).map(cb=>cb.value),
+      equipmentBorrow: (()=>{
+        syncEquipmentDatesFromDom();
+        const eqSelected = Array.from(document.querySelectorAll('#elderlyEquipmentBorrowGroup input[type=checkbox]:checked')).map(cb=>cb.value);
+        const eqDates = {};
+        eqSelected.filter(v=>v!=='ไม่ได้ยืม').forEach(item=>{
+          eqDates[item] = elderlyEquipmentDatesTemp[item] || { borrowDate:'', returnDate:'' };
+        });
+        return {
+          items: eqSelected,
+          otherText: document.getElementById('elderlyEquipmentOtherText').value.trim(),
+          dates: eqDates
+        };
+      })(),
       photoUrl,
       cgCode,
       pdfMode: document.getElementById('elderlyPdfMode').value,
