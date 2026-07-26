@@ -41,15 +41,14 @@
   --shadow:0 2px 12px rgba(180,50,110,0.1);
   --shadow-lg:0 8px 30px rgba(180,50,110,0.2);
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;overflow-x:hidden;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
 body{
   font-family:'Sarabun',sans-serif;
   background:var(--bg);
   color:var(--text);
   min-height:100vh;
   padding-bottom:40px;
-  touch-action:manipulation;
 }
 a{color:var(--secondary);}
 .app-header{
@@ -157,7 +156,7 @@ a{color:var(--secondary);}
 
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 label{font-size:0.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;}
-select,input[type=text],input[type=number],input[type=tel],input[type=date],input[type=password],input[type=email],textarea{
+select,input[type=text],input[type=number],input[type=tel],input[type=date],textarea{
   font-family:inherit;
   font-size:0.9rem;
   padding:9px 11px;
@@ -173,15 +172,13 @@ textarea{resize:vertical;min-height:60px;}
   font-family:inherit;
   border:none;
   border-radius:8px;
-  padding:11px 16px;
-  min-height:42px;
+  padding:10px 16px;
   font-size:0.85rem;
   font-weight:600;
   cursor:pointer;
   transition:transform 0.1s, opacity 0.15s;
   display:inline-flex;
   align-items:center;
-  justify-content:center;
   gap:6px;
 }
 .btn:active{transform:scale(0.97);}
@@ -197,20 +194,7 @@ table{width:100%;border-collapse:collapse;font-size:0.85rem;}
 th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
 th{color:var(--muted);font-weight:600;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.02em;}
 tr:hover td{background:#fdf6fa;}
-.table-wrap{
-  overflow-x:auto;
-  -webkit-overflow-scrolling:touch;
-  background:
-    linear-gradient(to right, var(--card) 30%, rgba(255,255,255,0)),
-    linear-gradient(to right, rgba(255,255,255,0), var(--card) 70%) 0 100%,
-    radial-gradient(farthest-side at 0% 50%, rgba(60,20,40,0.18), rgba(0,0,0,0)),
-    radial-gradient(farthest-side at 100% 50%, rgba(60,20,40,0.18), rgba(0,0,0,0)) 0 100%;
-  background-repeat:no-repeat;
-  background-color:var(--card);
-  background-size:24px 100%, 24px 100%, 10px 100%, 10px 100%;
-  background-position:0 0, 100% 0, 0 0, 100% 0;
-  background-attachment:local, local, scroll, scroll;
-}
+.table-wrap{overflow-x:auto;}
 .badge{
   display:inline-block;
   padding:2px 9px;
@@ -223,10 +207,9 @@ tr:hover td{background:#fdf6fa;}
 .badge.gray{background:#eef1f0;color:var(--muted);}
 .badge.orange{background:var(--danger-light);color:var(--danger);}
 
-.checkbox-group{display:flex;flex-direction:column;gap:2px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#fff;}
-.checkbox-item{display:flex;align-items:center;gap:10px;font-size:0.88rem;font-weight:400;color:var(--text);cursor:pointer;min-height:40px;padding:4px 4px;border-radius:6px;}
-.checkbox-item:active{background:var(--bg);}
-.checkbox-item input{width:19px;height:19px;flex:none;cursor:pointer;}
+.checkbox-group{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff;}
+.checkbox-item{display:flex;align-items:center;gap:8px;font-size:0.88rem;font-weight:400;color:var(--text);cursor:pointer;}
+.checkbox-item input{width:16px;height:16px;flex:none;cursor:pointer;}
 
 .progress-outer{background:#eef1f0;border-radius:999px;height:10px;overflow:hidden;width:100%;}
 .progress-inner{background:var(--primary);height:100%;transition:width 0.3s;}
@@ -274,11 +257,7 @@ tr:hover td{background:#fdf6fa;}
   padding:20px;
 }
 .modal-box h3{margin:0 0 14px;font-size:1.05rem;color:var(--primary-dark);}
-.modal-actions{
-  display:flex;justify-content:flex-end;gap:8px;margin:16px -20px -20px;
-  padding:12px 20px calc(12px + env(safe-area-inset-bottom));
-  position:sticky;bottom:-20px;background:#fff;border-top:1px solid var(--border);z-index:2;
-}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
 .pdf-preview-overlay{
   position:fixed;inset:0;background:rgba(15,30,25,0.75);
@@ -411,60 +390,9 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 .pending-badge{background:var(--danger-light);color:var(--danger);}
 
 @media (max-width:640px){
-  .app-header{padding:14px 14px 10px;}
   .app-header h1{font-size:0.92rem;}
-  .app-header p{font-size:0.72rem;}
-  .container{padding:10px;}
   .card{padding:13px;}
-  .card h2{font-size:0.92rem;}
-
-  /* Prevent iOS auto-zoom on focus by keeping inputs at 16px, but keep visual size compact */
-  select,input[type=text],input[type=number],input[type=tel],input[type=date],input[type=password],input[type=email],textarea{
-    font-size:16px;
-    padding:10px 11px;
-  }
-
-  /* Stack paired form fields for easier tapping; excluded via .row-inline */
-  .row{flex-direction:column;gap:0;}
-  .row .field{flex:1 1 100%;width:100%;}
-  .row-inline{flex-direction:row;}
-
-  .filter-bar{flex-direction:column;align-items:stretch;}
-  .filter-bar .field{min-width:0;width:100%;}
-
-  .section-actions{flex-direction:column;align-items:stretch;}
-  .section-actions .btn{width:100%;justify-content:center;}
-
-  .tabbar{gap:5px;}
-  .tab-btn{padding:9px 12px;font-size:0.8rem;}
-
-  .modal-overlay{padding:0;align-items:flex-end;}
-  .modal-box{max-width:100%;width:100%;max-height:92vh;border-radius:16px 16px 0 0;}
-  .modal-actions{flex-direction:column;}
-  .modal-actions .btn{width:100%;min-height:46px;}
-
-  table{font-size:0.8rem;}
-  th,td{padding:7px 8px;}
-
-  .grid-cards{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
-  .stat-box{padding:10px 8px;}
-  .stat-box .num{font-size:1.3rem;}
-
-  .visit-report-grid{gap:6px;}
-  .visit-report-stat{padding:6px;}
-  .visit-report-stat .num{font-size:1.05rem;}
-
-  .photo-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
-  .photo-card img{height:100px;}
-
-  .toast-wrap{left:10px;right:10px;bottom:12px;align-items:stretch;}
-  .toast{max-width:100%;}
-
-  .auth-box{padding:20px 16px;}
-
-  .calendar-grid .day{padding:10px 0;font-size:0.85rem;}
 }
-
 </style>
 </head>
 <body>
@@ -888,6 +816,17 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
 
     <div class="card">
+      <h2>🩺 รายงานครุภัณฑ์ที่ยืมจาก รพ.สต.</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin:-4px 0 12px;">เชื่อมโยงจากข้อมูลผู้สูงอายุ และใช้ตัวกรอง CG ด้านบน</p>
+      <div class="grid-cards" id="borrowedEquipmentReportSummary"></div>
+      <div class="table-wrap" style="margin-top:14px;">
+        <table id="borrowedEquipmentReportTable"><thead><tr>
+          <th>CG ผู้ดูแล</th><th>ผู้สูงอายุ</th><th>ครุภัณฑ์</th><th>วันที่ยืม</th><th>วันที่คืน</th><th>สถานะ</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>📂 ดูข้อมูลที่บันทึก</h2>
       <div class="breadcrumb" id="drillBreadcrumb"></div>
       <div id="drillContent"></div>
@@ -1044,7 +983,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
     <div class="field">
       <label>ครุภัณฑ์ที่ยืมจาก รพ.สต.</label>
-      <div class="checkbox-group" id="elderlyEquipmentBorrowGroup">
+      <div class="checkbox-group" id="elderlyBorrowedEquipmentGroup">
         <label class="checkbox-item"><input type="checkbox" value="ไม่ได้ยืม"> ไม่ได้ยืม</label>
         <label class="checkbox-item"><input type="checkbox" value="เตียงผู้ป่วยแบบธรรมดา"> เตียงผู้ป่วยแบบธรรมดา</label>
         <label class="checkbox-item"><input type="checkbox" value="เตียง 3 ไกด์"> เตียง 3 ไกด์</label>
@@ -1055,8 +994,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
         <label class="checkbox-item"><input type="checkbox" value="เครื่องซักชั่น(ดูดเสมหะ)"> เครื่องซักชั่น(ดูดเสมหะ)</label>
         <label class="checkbox-item"><input type="checkbox" value="อื่นๆ"> อื่นๆ โปรดระบุ</label>
       </div>
-      <input type="text" id="elderlyEquipmentOtherText" placeholder="โปรดระบุ" style="margin-top:6px;display:none;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
-      <div id="elderlyEquipmentDatesContainer" style="margin-top:10px;display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="elderlyBorrowedEquipmentDates" style="margin-top:10px;"></div>
     </div>
     <div class="field">
       <label>รูปภาพผู้สูงอายุ (ขนาด 1200 x 675 px)</label>
@@ -1339,6 +1277,7 @@ document.getElementById('tabbar').addEventListener('click', (e)=>{
   if(tab === 'cg') renderCgTable();
   if(tab === 'elderly') renderElderlyTable();
   if(tab === 'ltc') { renderLtcSummaryTable(); renderLtcTable(); }
+  if(tab === 'pdf') renderBorrowedEquipmentReport();
   if(tab === 'users') renderUsersTable();
 });
 
@@ -1760,6 +1699,7 @@ function refreshAllDependentUI(){
   if(activeTab === 'cg') renderCgTable();
   if(activeTab === 'elderly') renderElderlyTable();
   if(activeTab === 'ltc') { renderLtcSummaryTable(); renderLtcTable(); }
+  if(activeTab === 'pdf') renderBorrowedEquipmentReport();
 }
 
 function populateCgSelects(){
@@ -2131,7 +2071,7 @@ function renderDashboard(){
         <td>${visitedCountOfCg}</td>
         <td>${remainingOfCg}</td>
         <td style="min-width:140px;">
-          <div class="row row-inline" style="gap:6px;align-items:center;">
+          <div class="row" style="gap:6px;align-items:center;">
             <div class="progress-outer" style="flex:1;"><div class="progress-inner" style="width:${pct}%;"></div></div>
             <span style="font-size:0.75rem;color:var(--muted);">${pct}%</span>
           </div>
@@ -2348,7 +2288,6 @@ document.getElementById('selectVisitCancelBtn').addEventListener('click', ()=>{
 let recSelectedDates = [];
 let recSelectedPhotos = []; // {file, dataUrl}
 let elderlySelectedPhotoDataUrl = null; // pending new/updated elderly profile photo
-let elderlyEquipmentDatesTemp = {}; // {itemValue: {borrowDate, returnDate}} while elderly modal is open
 let cgSelectedPhotoDataUrl = null; // pending new/updated CG photo
 
 function populateElderlySelectsForRecordTab(){
@@ -3038,6 +2977,66 @@ function bindLtcTabEvents(){
   document.getElementById('searchLtc').addEventListener('input', renderLtcTable);
 }
 
+function renderBorrowedEquipmentDateFields(savedItems = []){
+  const container = document.getElementById('elderlyBorrowedEquipmentDates');
+  const current = {};
+  container.querySelectorAll('[data-equipment-name]').forEach(row=>{
+    const name = row.dataset.equipmentName;
+    current[name] = {
+      name,
+      borrowedDate: row.querySelector('.borrowed-date').value,
+      returnDate: row.querySelector('.return-date').value,
+      otherDetail: (row.querySelector('.other-equipment-detail') || {}).value || ''
+    };
+  });
+  savedItems.forEach(item=>{ current[item.name] = item; });
+
+  const selected = Array.from(document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]:checked')).map(cb=>cb.value);
+  const borrowed = selected.filter(name=>name !== 'ไม่ได้ยืม');
+  if(borrowed.length === 0){
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = '';
+  borrowed.forEach(name=>{
+    const item = current[name] || {};
+    const row = document.createElement('div');
+    row.dataset.equipmentName = name;
+    row.style.cssText = 'padding:10px;margin-top:8px;border:1px solid var(--border);border-radius:8px;background:var(--secondary-light);';
+    const title = document.createElement('div');
+    title.textContent = name;
+    title.style.cssText = 'font-size:0.85rem;font-weight:600;color:var(--text);margin-bottom:8px;';
+    const fields = document.createElement('div');
+    fields.className = 'row';
+    fields.innerHTML = `
+      <div class="field" style="margin-bottom:0;"><label>วันที่ยืม</label><input class="borrowed-date" type="date" value="${escapeHtml(item.borrowedDate || '')}"></div>
+      <div class="field" style="margin-bottom:0;"><label>วันที่คืน</label><input class="return-date" type="date" value="${escapeHtml(item.returnDate || '')}"></div>
+    `;
+    row.appendChild(title);
+    if(name === 'อื่นๆ'){
+      const other = document.createElement('div');
+      other.className = 'field';
+      other.style.marginBottom = '8px';
+      other.innerHTML = `<label>ระบุครุภัณฑ์</label><input class="other-equipment-detail" type="text" value="${escapeHtml(item.otherDetail || '')}" placeholder="โปรดระบุครุภัณฑ์">`;
+      row.appendChild(other);
+    }
+    row.appendChild(fields);
+    container.appendChild(row);
+  });
+}
+
+function getBorrowedEquipment(){
+  const selected = Array.from(document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]:checked')).map(cb=>cb.value);
+  if(selected.includes('ไม่ได้ยืม')) return [{ name:'ไม่ได้ยืม', borrowedDate:'', returnDate:'', otherDetail:'' }];
+  return Array.from(document.querySelectorAll('#elderlyBorrowedEquipmentDates [data-equipment-name]')).map(row=>({
+    name: row.dataset.equipmentName,
+    borrowedDate: row.querySelector('.borrowed-date').value,
+    returnDate: row.querySelector('.return-date').value,
+    otherDetail: (row.querySelector('.other-equipment-detail') || {}).value.trim() || ''
+  }));
+}
+
 function bindElderlyTabEvents(){
   document.getElementById('addElderlyBtn').addEventListener('click', ()=>openElderlyModal(null));
   document.getElementById('exportElderlyBtn').addEventListener('click', exportElderlyToExcel);
@@ -3054,26 +3053,24 @@ function bindElderlyTabEvents(){
     document.getElementById('elderlyPhotoPreview').src = elderlySelectedPhotoDataUrl;
     previewWrap.style.display = 'block';
   });
-  document.getElementById('elderlyEquipmentBorrowGroup').addEventListener('change', (ev)=>{
-    syncEquipmentDatesFromDom();
-    const group = document.getElementById('elderlyEquipmentBorrowGroup');
-    const noneCb = group.querySelector('input[value="ไม่ได้ยืม"]');
-    if(ev.target === noneCb && noneCb.checked){
-      group.querySelectorAll('input[type=checkbox]').forEach(cb=>{ if(cb !== noneCb) cb.checked = false; });
-    } else if(ev.target.checked && ev.target !== noneCb){
-      noneCb.checked = false;
-    }
-    const otherCb = group.querySelector('input[value="อื่นๆ"]');
-    const otherText = document.getElementById('elderlyEquipmentOtherText');
-    otherText.style.display = otherCb.checked ? 'block' : 'none';
-    if(!otherCb.checked) otherText.value = '';
-    renderEquipmentDateRows();
-  });
   document.getElementById('elderlyDetailCloseBtn').addEventListener('click', ()=>document.getElementById('elderlyDetailModal').classList.remove('show'));
   document.getElementById('elderlyDetailEditBtn').addEventListener('click', ()=>{
     const eid = document.getElementById('elderlyDetailModal').dataset.currentEid;
     document.getElementById('elderlyDetailModal').classList.remove('show');
     openElderlyModal(eid);
+  });
+  document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const none = document.querySelector('#elderlyBorrowedEquipmentGroup input[value="ไม่ได้ยืม"]');
+      if(cb.value === 'ไม่ได้ยืม' && cb.checked){
+        document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(input=>{
+          if(input !== cb) input.checked = false;
+        });
+      } else if(cb.checked){
+        none.checked = false;
+      }
+      renderBorrowedEquipmentDateFields();
+    });
   });
 }
 
@@ -3104,53 +3101,15 @@ function openElderlyDetailModal(eid){
     ${row('ปัญหาสุขภาพ', escapeHtml(e.healthProblem||'-'))}
     ${row('ความต้องการ', escapeHtml(e.need||'-'))}
     ${row('สิ่งของสนับสนุนจากโครงการ LTC', (e.ltcSupport && e.ltcSupport.length) ? escapeHtml(e.ltcSupport.join(', ')) : '-')}
-    ${row('ครุภัณฑ์ที่ยืมจาก รพ.สต.', formatEquipmentBorrow(e.equipmentBorrow))}
+    ${row('ครุภัณฑ์ที่ยืมจาก รพ.สต.', (e.borrowedEquipment && e.borrowedEquipment.length) ? e.borrowedEquipment.map(item=>{
+      const detail = item.name === 'อื่นๆ' && item.otherDetail ? ` (${item.otherDetail})` : '';
+      const dates = [item.borrowedDate ? `ยืม ${item.borrowedDate}` : '', item.returnDate ? `คืน ${item.returnDate}` : ''].filter(Boolean).join(' / ');
+      return escapeHtml(`${item.name || '-'}${detail}${dates ? ` — ${dates}` : ''}`);
+    }).join('<br>') : '-')}
     ${row('CG ผู้ดูแล', escapeHtml(cgName))}
     ${row('โหมด PDF', e.pdfMode==='obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)')}
   `;
   document.getElementById('elderlyDetailModal').classList.add('show');
-}
-
-function syncEquipmentDatesFromDom(){
-  document.querySelectorAll('#elderlyEquipmentDatesContainer .equipment-date-row').forEach(rowEl=>{
-    const item = rowEl.dataset.item;
-    const b = rowEl.querySelector('.eq-borrow-date').value;
-    const r = rowEl.querySelector('.eq-return-date').value;
-    elderlyEquipmentDatesTemp[item] = { borrowDate: b, returnDate: r };
-  });
-}
-
-function renderEquipmentDateRows(){
-  const group = document.getElementById('elderlyEquipmentBorrowGroup');
-  const selected = Array.from(group.querySelectorAll('input[type=checkbox]:checked'))
-    .map(cb=>cb.value).filter(v=>v !== 'ไม่ได้ยืม');
-  const container = document.getElementById('elderlyEquipmentDatesContainer');
-  container.innerHTML = selected.map(item=>{
-    const d = elderlyEquipmentDatesTemp[item] || {};
-    return `
-    <div class="equipment-date-row" data-item="${escapeHtml(item)}" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
-      <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">${escapeHtml(item)}</div>
-      <div class="row">
-        <div class="field"><label>วันที่ยืม</label><input type="date" class="eq-borrow-date" value="${d.borrowDate||''}"></div>
-        <div class="field"><label>วันที่คืน</label><input type="date" class="eq-return-date" value="${d.returnDate||''}"></div>
-      </div>
-    </div>`;
-  }).join('');
-  container.querySelectorAll('input[type=date]').forEach(inp=>{
-    inp.addEventListener('change', syncEquipmentDatesFromDom);
-  });
-}
-
-function formatEquipmentBorrow(eb){
-  if(!eb || !eb.items || !eb.items.length) return '-';
-  if(eb.items.includes('ไม่ได้ยืม')) return 'ไม่ได้ยืม';
-  const parts = eb.items.map(item=>{
-    const label = (item === 'อื่นๆ' && eb.otherText) ? `อื่นๆ: ${escapeHtml(eb.otherText)}` : escapeHtml(item);
-    const d = (eb.dates && eb.dates[item]) || {};
-    const dateStr = (d.borrowDate || d.returnDate) ? ` (ยืม ${d.borrowDate||'-'} / คืน ${d.returnDate||'-'})` : '';
-    return label + dateStr;
-  });
-  return parts.join('<br>');
 }
 
 function openElderlyModal(eid){
@@ -3179,14 +3138,10 @@ function openElderlyModal(eid){
     document.getElementById('elderlyNeed').value = e.need || '';
     { const ltcSel = e.ltcSupport || [];
       document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]').forEach(cb=>{ cb.checked = ltcSel.includes(cb.value); }); }
-    { const eb = e.equipmentBorrow || {};
-      const eqSel = eb.items || [];
-      document.querySelectorAll('#elderlyEquipmentBorrowGroup input[type=checkbox]').forEach(cb=>{ cb.checked = eqSel.includes(cb.value); });
-      const otherText = document.getElementById('elderlyEquipmentOtherText');
-      otherText.value = eb.otherText || '';
-      otherText.style.display = eqSel.includes('อื่นๆ') ? 'block' : 'none';
-      elderlyEquipmentDatesTemp = JSON.parse(JSON.stringify(eb.dates || {}));
-      renderEquipmentDateRows(); }
+    { const borrowedEquipment = e.borrowedEquipment || [];
+      const selectedEquipment = borrowedEquipment.map(item=>item.name);
+      document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(cb=>{ cb.checked = selectedEquipment.includes(cb.value); });
+      renderBorrowedEquipmentDateFields(borrowedEquipment); }
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
     document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
     if(e.photoUrl){ previewImg.src = e.photoUrl; previewWrap.style.display = 'block'; }
@@ -3206,11 +3161,8 @@ function openElderlyModal(eid){
     document.getElementById('elderlyHealthProblem').value = '';
     document.getElementById('elderlyNeed').value = '';
     document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
-    document.querySelectorAll('#elderlyEquipmentBorrowGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
-    document.getElementById('elderlyEquipmentOtherText').value = '';
-    document.getElementById('elderlyEquipmentOtherText').style.display = 'none';
-    elderlyEquipmentDatesTemp = {};
-    renderEquipmentDateRows();
+    document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
+    renderBorrowedEquipmentDateFields();
     document.getElementById('elderlyPdfMode').value = 'normal';
     previewImg.src = ''; previewWrap.style.display = 'none';
   }
@@ -3247,19 +3199,7 @@ async function saveElderly(){
       healthProblem: document.getElementById('elderlyHealthProblem').value.trim().slice(0,100),
       need: document.getElementById('elderlyNeed').value.trim().slice(0,100),
       ltcSupport: Array.from(document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]:checked')).map(cb=>cb.value),
-      equipmentBorrow: (()=>{
-        syncEquipmentDatesFromDom();
-        const eqSelected = Array.from(document.querySelectorAll('#elderlyEquipmentBorrowGroup input[type=checkbox]:checked')).map(cb=>cb.value);
-        const eqDates = {};
-        eqSelected.filter(v=>v!=='ไม่ได้ยืม').forEach(item=>{
-          eqDates[item] = elderlyEquipmentDatesTemp[item] || { borrowDate:'', returnDate:'' };
-        });
-        return {
-          items: eqSelected,
-          otherText: document.getElementById('elderlyEquipmentOtherText').value.trim(),
-          dates: eqDates
-        };
-      })(),
+      borrowedEquipment: getBorrowedEquipment(),
       photoUrl,
       cgCode,
       pdfMode: document.getElementById('elderlyPdfMode').value,
@@ -3300,6 +3240,54 @@ async function deleteElderly(eid){
 ========================================================= */
 function bindPdfTabEvents(){
   document.getElementById('generatePdfBtn').addEventListener('click', generatePdf);
+  document.getElementById('pdfCgFilter').addEventListener('change', renderBorrowedEquipmentReport);
+}
+
+function renderBorrowedEquipmentReport(){
+  const summary = document.getElementById('borrowedEquipmentReportSummary');
+  const tbody = document.querySelector('#borrowedEquipmentReportTable tbody');
+  if(!summary || !tbody) return;
+
+  const cgFilter = document.getElementById('pdfCgFilter').value;
+  const rows = [];
+  Object.entries(STATE.elderly || {}).forEach(([elderlyId, elderly])=>{
+    if(cgFilter && elderly.cgCode !== cgFilter) return;
+    (elderly.borrowedEquipment || []).forEach(item=>{
+      if(!item || !item.name || item.name === 'ไม่ได้ยืม') return;
+      rows.push({ elderlyId, elderly, item });
+    });
+  });
+  rows.sort((a,b)=>{
+    const cgCompare = (a.elderly.cgCode || '').localeCompare(b.elderly.cgCode || '', 'th');
+    return cgCompare || (a.elderly.name || '').localeCompare(b.elderly.name || '', 'th');
+  });
+
+  const elderlyCount = new Set(rows.map(row=>row.elderlyId)).size;
+  const outstanding = rows.filter(row=>!row.item.returnDate).length;
+  summary.innerHTML = `
+    <div class="stat-box"><div class="num">${rows.length}</div><div class="lbl">รายการครุภัณฑ์ที่ยืม</div></div>
+    <div class="stat-box blue"><div class="num">${elderlyCount}</div><div class="lbl">ผู้สูงอายุที่ยืม</div></div>
+    <div class="stat-box orange"><div class="num">${outstanding}</div><div class="lbl">ยังไม่ระบุวันที่คืน</div></div>
+  `;
+
+  if(rows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">ไม่พบข้อมูลครุภัณฑ์ที่ยืมจาก รพ.สต. ตาม CG ที่เลือก</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(({elderly, item})=>{
+    const cg = STATE.cgs[elderly.cgCode] || {};
+    const cgLabel = cg.name ? `${elderly.cgCode} - ${cg.name}` : (elderly.cgCode || '-');
+    const equipment = item.name === 'อื่นๆ' && item.otherDetail ? `อื่นๆ: ${item.otherDetail}` : item.name;
+    const status = item.returnDate ? '<span class="badge green">คืนแล้ว</span>' : '<span class="badge orange">กำลังยืม</span>';
+    return `<tr>
+      <td>${escapeHtml(cgLabel)}</td>
+      <td>${escapeHtml(elderly.name || '-')}</td>
+      <td>${escapeHtml(equipment)}</td>
+      <td>${item.borrowedDate ? escapeHtml(formatThaiDateShort(item.borrowedDate)) : '-'}</td>
+      <td>${item.returnDate ? escapeHtml(formatThaiDateShort(item.returnDate)) : '-'}</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
 }
 
 function chunkArray(arr, size){
