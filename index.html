@@ -827,6 +827,17 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     </div>
 
     <div class="card">
+      <h2>⚰️ รายงานการจำหน่ายผู้สูงอายุ</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin:-4px 0 12px;">เชื่อมโยงจากข้อมูลผู้สูงอายุ และใช้ตัวกรอง CG ด้านบน</p>
+      <div class="grid-cards" id="dischargeReportSummary"></div>
+      <div class="table-wrap" style="margin-top:14px;">
+        <table id="dischargeReportTable"><thead><tr>
+          <th>CG ผู้ดูแล</th><th>ชื่อ-สกุล</th><th>อายุ</th><th>ที่อยู่</th><th>สาเหตุการจำหน่าย</th><th>วันที่จำหน่าย</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>📂 ดูข้อมูลที่บันทึก</h2>
       <div class="breadcrumb" id="drillBreadcrumb"></div>
       <div id="drillContent"></div>
@@ -1005,6 +1016,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
         <option value="จำหน่าย ย้ายออกนอกพื้นที่">จำหน่าย ย้ายออกนอกพื้นที่</option>
         <option value="จำหน่าย อื่นๆ">จำหน่าย อื่นๆ โปรดระบุ...</option>
       </select>
+      <div id="elderlyDischargeDateWrap" style="display:none;margin-top:8px;">
+        <label style="font-size:0.8rem;color:var(--muted);">วันที่จำหน่าย</label>
+        <input type="date" id="elderlyDischargeDate">
+      </div>
       <div id="elderlyDischargeOtherWrap" style="display:none;margin-top:8px;">
         <input type="text" id="elderlyDischargeOtherDetail" placeholder="โปรดระบุ">
       </div>
@@ -1290,7 +1305,7 @@ document.getElementById('tabbar').addEventListener('click', (e)=>{
   if(tab === 'cg') renderCgTable();
   if(tab === 'elderly') renderElderlyTable();
   if(tab === 'ltc') { renderLtcSummaryTable(); renderLtcTable(); }
-  if(tab === 'pdf') renderBorrowedEquipmentReport();
+  if(tab === 'pdf'){ renderBorrowedEquipmentReport(); renderDischargeReport(); }
   if(tab === 'users') renderUsersTable();
 });
 
@@ -1712,7 +1727,7 @@ function refreshAllDependentUI(){
   if(activeTab === 'cg') renderCgTable();
   if(activeTab === 'elderly') renderElderlyTable();
   if(activeTab === 'ltc') { renderLtcSummaryTable(); renderLtcTable(); }
-  if(activeTab === 'pdf') renderBorrowedEquipmentReport();
+  if(activeTab === 'pdf'){ renderBorrowedEquipmentReport(); renderDischargeReport(); }
 }
 
 function populateCgSelects(){
@@ -2826,7 +2841,7 @@ function exportElderlyToExcel(){
   const header = [
     'รหัส','ชื่อ-สกุล','เลขบัตรประชาชน','HN','อายุ','เพศ','บ้านเลขที่','หมู่ที่',
     'คะแนน ADL','TAI','กลุ่ม ADL','ความพิการ','ปัญหาสุขภาพ','ความต้องการ',
-    'การจำหน่ายผู้สูงอายุ','CG ผู้ดูแล','โหมด PDF','สถานะ'
+    'การจำหน่ายผู้สูงอายุ','วันที่จำหน่าย','CG ผู้ดูแล','โหมด PDF','สถานะ'
   ];
 
   const rows = ids.map(id=>{
@@ -2848,6 +2863,7 @@ function exportElderlyToExcel(){
       e.healthProblem || '',
       e.need || '',
       (e.dischargeStatus || 'ยังไม่จำหน่าย') === 'จำหน่าย อื่นๆ' && e.dischargeOtherDetail ? `จำหน่าย อื่นๆ: ${e.dischargeOtherDetail}` : (e.dischargeStatus || 'ยังไม่จำหน่าย'),
+      e.dischargeDate || '',
       cgName,
       e.pdfMode === 'obt' ? 'อบต.' : 'ปกติ',
       e.status === 'active' ? 'ใช้งาน' : (e.status || '-')
@@ -2858,7 +2874,7 @@ function exportElderlyToExcel(){
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [
     {wch:8},{wch:24},{wch:16},{wch:12},{wch:6},{wch:8},{wch:10},{wch:8},
-    {wch:10},{wch:8},{wch:10},{wch:24},{wch:24},{wch:24},{wch:24},{wch:20},{wch:10},{wch:10}
+    {wch:10},{wch:8},{wch:10},{wch:24},{wch:24},{wch:24},{wch:24},{wch:12},{wch:20},{wch:10},{wch:10}
   ];
 
   const wb = XLSX.utils.book_new();
@@ -3087,6 +3103,8 @@ function bindElderlyTabEvents(){
     });
   });
   document.getElementById('elderlyDischargeStatus').addEventListener('change', (ev)=>{
+    const isDischarged = ev.target.value !== 'ยังไม่จำหน่าย';
+    document.getElementById('elderlyDischargeDateWrap').style.display = isDischarged ? 'block' : 'none';
     document.getElementById('elderlyDischargeOtherWrap').style.display = (ev.target.value === 'จำหน่าย อื่นๆ') ? 'block' : 'none';
   });
 }
@@ -3123,7 +3141,13 @@ function openElderlyDetailModal(eid){
       const dates = [item.borrowedDate ? `ยืม ${item.borrowedDate}` : '', item.returnDate ? `คืน ${item.returnDate}` : ''].filter(Boolean).join(' / ');
       return escapeHtml(`${item.name || '-'}${detail}${dates ? ` — ${dates}` : ''}`);
     }).join('<br>') : '-')}
-    ${row('การจำหน่ายผู้สูงอายุ', escapeHtml((e.dischargeStatus || 'ยังไม่จำหน่าย') === 'จำหน่าย อื่นๆ' && e.dischargeOtherDetail ? `จำหน่าย อื่นๆ: ${e.dischargeOtherDetail}` : (e.dischargeStatus || 'ยังไม่จำหน่าย')))}
+    ${row('การจำหน่ายผู้สูงอายุ', escapeHtml((()=>{
+      const status = e.dischargeStatus || 'ยังไม่จำหน่าย';
+      if(status === 'ยังไม่จำหน่าย') return status;
+      const detail = status === 'จำหน่าย อื่นๆ' && e.dischargeOtherDetail ? `: ${e.dischargeOtherDetail}` : '';
+      const date = e.dischargeDate ? ` (วันที่ ${e.dischargeDate})` : '';
+      return `${status}${detail}${date}`;
+    })()))}
     ${row('CG ผู้ดูแล', escapeHtml(cgName))}
     ${row('โหมด PDF', e.pdfMode==='obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)')}
   `;
@@ -3161,7 +3185,9 @@ function openElderlyModal(eid){
       document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(cb=>{ cb.checked = selectedEquipment.includes(cb.value); });
       renderBorrowedEquipmentDateFields(borrowedEquipment); }
     document.getElementById('elderlyDischargeStatus').value = e.dischargeStatus || 'ยังไม่จำหน่าย';
+    document.getElementById('elderlyDischargeDate').value = e.dischargeDate || '';
     document.getElementById('elderlyDischargeOtherDetail').value = e.dischargeOtherDetail || '';
+    document.getElementById('elderlyDischargeDateWrap').style.display = (e.dischargeStatus && e.dischargeStatus !== 'ยังไม่จำหน่าย') ? 'block' : 'none';
     document.getElementById('elderlyDischargeOtherWrap').style.display = (e.dischargeStatus === 'จำหน่าย อื่นๆ') ? 'block' : 'none';
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
     document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
@@ -3185,7 +3211,9 @@ function openElderlyModal(eid){
     document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
     renderBorrowedEquipmentDateFields();
     document.getElementById('elderlyDischargeStatus').value = 'ยังไม่จำหน่าย';
+    document.getElementById('elderlyDischargeDate').value = '';
     document.getElementById('elderlyDischargeOtherDetail').value = '';
+    document.getElementById('elderlyDischargeDateWrap').style.display = 'none';
     document.getElementById('elderlyDischargeOtherWrap').style.display = 'none';
     document.getElementById('elderlyPdfMode').value = 'normal';
     previewImg.src = ''; previewWrap.style.display = 'none';
@@ -3206,7 +3234,9 @@ async function saveElderly(){
   const missingOtherEquipmentDetail = borrowedEquipmentList.find(item=>item.name === 'อื่นๆ' && !item.otherDetail);
   if(missingOtherEquipmentDetail){ showToast('กรุณาระบุรายละเอียดครุภัณฑ์ "อื่นๆ"','error'); return; }
   const dischargeStatus = document.getElementById('elderlyDischargeStatus').value;
+  const dischargeDate = document.getElementById('elderlyDischargeDate').value;
   const dischargeOtherDetail = document.getElementById('elderlyDischargeOtherDetail').value.trim();
+  if(dischargeStatus !== 'ยังไม่จำหน่าย' && !dischargeDate){ showToast('กรุณาระบุวันที่จำหน่าย','error'); return; }
   if(dischargeStatus === 'จำหน่าย อื่นๆ' && !dischargeOtherDetail){ showToast('กรุณาระบุรายละเอียดการจำหน่าย "อื่นๆ"','error'); return; }
   const editId = document.getElementById('elderlyEditId').value;
   const saveBtn = document.getElementById('elderlySaveBtn');
@@ -3233,6 +3263,7 @@ async function saveElderly(){
       ltcSupport: Array.from(document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]:checked')).map(cb=>cb.value),
       borrowedEquipment: borrowedEquipmentList,
       dischargeStatus,
+      dischargeDate: dischargeStatus !== 'ยังไม่จำหน่าย' ? dischargeDate : '',
       dischargeOtherDetail: dischargeStatus === 'จำหน่าย อื่นๆ' ? dischargeOtherDetail : '',
       photoUrl,
       cgCode,
@@ -3274,7 +3305,10 @@ async function deleteElderly(eid){
 ========================================================= */
 function bindPdfTabEvents(){
   document.getElementById('generatePdfBtn').addEventListener('click', generatePdf);
-  document.getElementById('pdfCgFilter').addEventListener('change', renderBorrowedEquipmentReport);
+  document.getElementById('pdfCgFilter').addEventListener('change', ()=>{
+    renderBorrowedEquipmentReport();
+    renderDischargeReport();
+  });
 }
 
 function renderBorrowedEquipmentReport(){
@@ -3328,6 +3362,49 @@ function chunkArray(arr, size){
   const out = [];
   for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i, i+size));
   return out;
+}
+
+function renderDischargeReport(){
+  const summary = document.getElementById('dischargeReportSummary');
+  const tbody = document.querySelector('#dischargeReportTable tbody');
+  if(!summary || !tbody) return;
+
+  const cgFilter = document.getElementById('pdfCgFilter').value;
+  const rows = [];
+  Object.entries(STATE.elderly || {}).forEach(([elderlyId, elderly])=>{
+    if(cgFilter && elderly.cgCode !== cgFilter) return;
+    const status = elderly.dischargeStatus || 'ยังไม่จำหน่าย';
+    if(status === 'ยังไม่จำหน่าย') return;
+    rows.push({ elderlyId, elderly });
+  });
+  rows.sort((a,b)=>{
+    const dateCompare = (b.elderly.dischargeDate || '').localeCompare(a.elderly.dischargeDate || '');
+    if(dateCompare) return dateCompare;
+    return (a.elderly.name || '').localeCompare(b.elderly.name || '', 'th');
+  });
+
+  summary.innerHTML = `
+    <div class="stat-box"><div class="num">${rows.length}</div><div class="lbl">ผู้สูงอายุที่จำหน่าย</div></div>
+  `;
+
+  if(rows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">ไม่พบข้อมูลการจำหน่ายผู้สูงอายุตาม CG ที่เลือก</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(({elderly})=>{
+    const cg = STATE.cgs[elderly.cgCode] || {};
+    const cgLabel = cg.name ? `${elderly.cgCode} - ${cg.name}` : (elderly.cgCode || '-');
+    const address = [elderly.houseNo ? ('บ้านเลขที่ '+elderly.houseNo) : '', elderly.moo ? ('หมู่ '+elderly.moo) : ''].filter(Boolean).join(' ') || '-';
+    const reason = elderly.dischargeStatus === 'จำหน่าย อื่นๆ' && elderly.dischargeOtherDetail ? `จำหน่าย อื่นๆ: ${elderly.dischargeOtherDetail}` : (elderly.dischargeStatus || '-');
+    return `<tr>
+      <td>${escapeHtml(cgLabel)}</td>
+      <td>${escapeHtml(elderly.name || '-')}</td>
+      <td>${elderly.age || '-'}</td>
+      <td>${escapeHtml(address)}</td>
+      <td>${escapeHtml(reason)}</td>
+      <td>${elderly.dischargeDate ? escapeHtml(formatThaiDateShort(elderly.dischargeDate)) : '-'}</td>
+    </tr>`;
+  }).join('');
 }
 
 async function generatePdf(){
