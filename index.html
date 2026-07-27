@@ -997,6 +997,19 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       <div id="elderlyBorrowedEquipmentDates" style="margin-top:10px;"></div>
     </div>
     <div class="field">
+      <label>การจำหน่ายผู้สูงอายุ</label>
+      <select id="elderlyDischargeStatus">
+        <option value="ยังไม่จำหน่าย">ยังไม่จำหน่าย</option>
+        <option value="จำหน่าย ADL>11">จำหน่าย ADL&gt;11</option>
+        <option value="จำหน่าย เสียชีวิต">จำหน่าย เสียชีวิต</option>
+        <option value="จำหน่าย ย้ายออกนอกพื้นที่">จำหน่าย ย้ายออกนอกพื้นที่</option>
+        <option value="จำหน่าย อื่นๆ">จำหน่าย อื่นๆ โปรดระบุ...</option>
+      </select>
+      <div id="elderlyDischargeOtherWrap" style="display:none;margin-top:8px;">
+        <input type="text" id="elderlyDischargeOtherDetail" placeholder="โปรดระบุ">
+      </div>
+    </div>
+    <div class="field">
       <label>รูปภาพผู้สูงอายุ (ขนาด 1200 x 675 px)</label>
       <input type="file" id="elderlyPhotoInput" accept="image/*">
       <div id="elderlyPhotoPreviewWrap" style="margin-top:8px;display:none;">
@@ -2813,7 +2826,7 @@ function exportElderlyToExcel(){
   const header = [
     'รหัส','ชื่อ-สกุล','เลขบัตรประชาชน','HN','อายุ','เพศ','บ้านเลขที่','หมู่ที่',
     'คะแนน ADL','TAI','กลุ่ม ADL','ความพิการ','ปัญหาสุขภาพ','ความต้องการ',
-    'CG ผู้ดูแล','โหมด PDF','สถานะ'
+    'การจำหน่ายผู้สูงอายุ','CG ผู้ดูแล','โหมด PDF','สถานะ'
   ];
 
   const rows = ids.map(id=>{
@@ -2834,6 +2847,7 @@ function exportElderlyToExcel(){
       e.disability || '',
       e.healthProblem || '',
       e.need || '',
+      (e.dischargeStatus || 'ยังไม่จำหน่าย') === 'จำหน่าย อื่นๆ' && e.dischargeOtherDetail ? `จำหน่าย อื่นๆ: ${e.dischargeOtherDetail}` : (e.dischargeStatus || 'ยังไม่จำหน่าย'),
       cgName,
       e.pdfMode === 'obt' ? 'อบต.' : 'ปกติ',
       e.status === 'active' ? 'ใช้งาน' : (e.status || '-')
@@ -2844,7 +2858,7 @@ function exportElderlyToExcel(){
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [
     {wch:8},{wch:24},{wch:16},{wch:12},{wch:6},{wch:8},{wch:10},{wch:8},
-    {wch:10},{wch:8},{wch:10},{wch:24},{wch:24},{wch:24},{wch:20},{wch:10},{wch:10}
+    {wch:10},{wch:8},{wch:10},{wch:24},{wch:24},{wch:24},{wch:24},{wch:20},{wch:10},{wch:10}
   ];
 
   const wb = XLSX.utils.book_new();
@@ -3033,7 +3047,7 @@ function getBorrowedEquipment(){
     name: row.dataset.equipmentName,
     borrowedDate: row.querySelector('.borrowed-date').value,
     returnDate: row.querySelector('.return-date').value,
-    otherDetail: (row.querySelector('.other-equipment-detail') || {}).value.trim() || ''
+    otherDetail: ((row.querySelector('.other-equipment-detail') || {}).value || '').trim()
   }));
 }
 
@@ -3072,6 +3086,9 @@ function bindElderlyTabEvents(){
       renderBorrowedEquipmentDateFields();
     });
   });
+  document.getElementById('elderlyDischargeStatus').addEventListener('change', (ev)=>{
+    document.getElementById('elderlyDischargeOtherWrap').style.display = (ev.target.value === 'จำหน่าย อื่นๆ') ? 'block' : 'none';
+  });
 }
 
 function openElderlyDetailModal(eid){
@@ -3106,6 +3123,7 @@ function openElderlyDetailModal(eid){
       const dates = [item.borrowedDate ? `ยืม ${item.borrowedDate}` : '', item.returnDate ? `คืน ${item.returnDate}` : ''].filter(Boolean).join(' / ');
       return escapeHtml(`${item.name || '-'}${detail}${dates ? ` — ${dates}` : ''}`);
     }).join('<br>') : '-')}
+    ${row('การจำหน่ายผู้สูงอายุ', escapeHtml((e.dischargeStatus || 'ยังไม่จำหน่าย') === 'จำหน่าย อื่นๆ' && e.dischargeOtherDetail ? `จำหน่าย อื่นๆ: ${e.dischargeOtherDetail}` : (e.dischargeStatus || 'ยังไม่จำหน่าย')))}
     ${row('CG ผู้ดูแล', escapeHtml(cgName))}
     ${row('โหมด PDF', e.pdfMode==='obt' ? 'อบต. (10-12 รูป/หน้า)' : 'ปกติ (4 รูป/หน้า)')}
   `;
@@ -3142,6 +3160,9 @@ function openElderlyModal(eid){
       const selectedEquipment = borrowedEquipment.map(item=>item.name);
       document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(cb=>{ cb.checked = selectedEquipment.includes(cb.value); });
       renderBorrowedEquipmentDateFields(borrowedEquipment); }
+    document.getElementById('elderlyDischargeStatus').value = e.dischargeStatus || 'ยังไม่จำหน่าย';
+    document.getElementById('elderlyDischargeOtherDetail').value = e.dischargeOtherDetail || '';
+    document.getElementById('elderlyDischargeOtherWrap').style.display = (e.dischargeStatus === 'จำหน่าย อื่นๆ') ? 'block' : 'none';
     document.getElementById('elderlyCgCode').value = e.cgCode || '';
     document.getElementById('elderlyPdfMode').value = e.pdfMode || 'normal';
     if(e.photoUrl){ previewImg.src = e.photoUrl; previewWrap.style.display = 'block'; }
@@ -3163,6 +3184,9 @@ function openElderlyModal(eid){
     document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
     document.querySelectorAll('#elderlyBorrowedEquipmentGroup input[type=checkbox]').forEach(cb=>{ cb.checked = false; });
     renderBorrowedEquipmentDateFields();
+    document.getElementById('elderlyDischargeStatus').value = 'ยังไม่จำหน่าย';
+    document.getElementById('elderlyDischargeOtherDetail').value = '';
+    document.getElementById('elderlyDischargeOtherWrap').style.display = 'none';
     document.getElementById('elderlyPdfMode').value = 'normal';
     previewImg.src = ''; previewWrap.style.display = 'none';
   }
@@ -3176,6 +3200,14 @@ async function saveElderly(){
   if(!name){ showToast('กรุณาระบุชื่อผู้สูงอายุ','error'); return; }
   if(idCard && !/^\d{13}$/.test(idCard)){ showToast('เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก','error'); return; }
   if(!cgCode){ showToast('กรุณาเลือก CG ผู้ดูแล','error'); return; }
+  const borrowedEquipmentList = getBorrowedEquipment();
+  const missingBorrowedDate = borrowedEquipmentList.find(item=>item.name !== 'ไม่ได้ยืม' && !item.borrowedDate);
+  if(missingBorrowedDate){ showToast(`กรุณาระบุวันที่ยืมของ "${missingBorrowedDate.name}"`,'error'); return; }
+  const missingOtherEquipmentDetail = borrowedEquipmentList.find(item=>item.name === 'อื่นๆ' && !item.otherDetail);
+  if(missingOtherEquipmentDetail){ showToast('กรุณาระบุรายละเอียดครุภัณฑ์ "อื่นๆ"','error'); return; }
+  const dischargeStatus = document.getElementById('elderlyDischargeStatus').value;
+  const dischargeOtherDetail = document.getElementById('elderlyDischargeOtherDetail').value.trim();
+  if(dischargeStatus === 'จำหน่าย อื่นๆ' && !dischargeOtherDetail){ showToast('กรุณาระบุรายละเอียดการจำหน่าย "อื่นๆ"','error'); return; }
   const editId = document.getElementById('elderlyEditId').value;
   const saveBtn = document.getElementById('elderlySaveBtn');
   saveBtn.disabled = true;
@@ -3199,7 +3231,9 @@ async function saveElderly(){
       healthProblem: document.getElementById('elderlyHealthProblem').value.trim().slice(0,100),
       need: document.getElementById('elderlyNeed').value.trim().slice(0,100),
       ltcSupport: Array.from(document.querySelectorAll('#elderlyLtcSupportGroup input[type=checkbox]:checked')).map(cb=>cb.value),
-      borrowedEquipment: getBorrowedEquipment(),
+      borrowedEquipment: borrowedEquipmentList,
+      dischargeStatus,
+      dischargeOtherDetail: dischargeStatus === 'จำหน่าย อื่นๆ' ? dischargeOtherDetail : '',
       photoUrl,
       cgCode,
       pdfMode: document.getElementById('elderlyPdfMode').value,
