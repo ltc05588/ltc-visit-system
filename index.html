@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+  <link rel="manifest" href="manifest.json">
+
+<!-- กำหนดสีธีมของแถบด้านบน (เปลี่ยนรหัสสีให้เข้ากับเว็บคุณได้) -->
+<meta name="theme-color" content="#ffc0cb"> 
+
+<!-- การตั้งค่าเพื่อให้รองรับการเป็นแอปบนระบบ iOS (iPhone/iPad) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LTC รพ.สต.บ้านนายอ">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>ระบบบันทึกการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง | รพ.สต.บ้านนายอ</title>
@@ -3974,6 +3984,17 @@ function formatThaiDateVeryShort(isoDate){
 
   // เรียกใช้งานฟังก์ชันทันทีที่โหลดหน้าเว็บ
   loadDropdownDataFromFirebase();
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(registration => {
+          console.log('ServiceWorker registered with scope:', registration.scope);
+        })
+        .catch(error => {
+          console.log('ServiceWorker registration failed:', error);
+        });
+    });
+  }
 </script>
 </body>
 </html>
