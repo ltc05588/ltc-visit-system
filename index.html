@@ -562,7 +562,29 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
           <input type="number" id="diaperQty" min="1" value="1">
         </div>
       </div>
-      
+      <!-- ส่วนที่เพิ่มเข้ามา: ฟิลด์สำหรับบันทึกการเบิกจ่าย -->
+      <div id="outFields" style="display: none;">
+        <div class="row">
+            <div class="field">
+                <label>วันที่จ่าย</label>
+                <input type="date" id="diaperDate">
+            </div>
+            <div class="field">
+                <label>ผู้เบิกจ่าย</label>
+                <select id="diaperSpender">
+                    <option value="">-- เลือกผู้เบิกจ่าย --</option>
+                    <!-- ข้อมูล CG จะถูกดึงจากฐานข้อมูลมาใส่ตรงนี้อัตโนมัติ -->
+                </select>
+            </div>
+            <div class="field">
+                <label>ผู้รับผ้าอ้อม (ผู้สูงอายุ)</label>
+                <select id="diaperReceiver">
+                    <option value="">-- เลือกผู้รับ --</option>
+                    <!-- ข้อมูลผู้สูงอายุ จะถูกดึงจากฐานข้อมูลมาใส่ตรงนี้อัตโนมัติ -->
+                </select>
+            </div>
+        </div>
+      </div>
       <!-- ส่วนที่เพิ่มเข้ามา: ฟิลด์สำหรับบันทึกการเบิกจ่าย (จะแสดงเมื่อเลือก 'จ่ายออก') -->
       <div id="outFields" style="display: none;">
         <div class="row">
@@ -3896,6 +3918,62 @@ function formatThaiDateVeryShort(isoDate){
       tbody.appendChild(tr);
     });
   }
+  // ฟังก์ชันดึงข้อมูล CG และผู้สูงอายุจาก Firebase มาใส่ใน Dropdown
+  function loadDropdownDataFromFirebase() {
+      // 1. โหลดข้อมูล CG (ผู้เบิกจ่าย)
+      // ⚠️ หมายเหตุ: เปลี่ยน 'cgs' เป็นชื่อ Path (Node) ที่คุณใช้เก็บข้อมูล CG ใน Firebase จริง
+      firebase.database().ref('cgs').on('value', function(snapshot) {
+          const spenderSelect = document.getElementById('diaperSpender');
+          
+          // ล้างค่าเดิมก่อน (ให้เหลือแค่อันแรก)
+          spenderSelect.innerHTML = '<option value="">-- เลือกผู้เบิกจ่าย --</option>';
+          
+          if (snapshot.exists()) {
+              snapshot.forEach(function(childSnapshot) {
+                  const cgData = childSnapshot.val();
+                  
+                  // ⚠️ หมายเหตุ: เปลี่ยน cgData.name เป็นชื่อฟิลด์ที่เก็บ "ชื่อ-สกุล" ในฐานข้อมูลของคุณ
+                  // เช่น cgData.fullname, cgData.firstName เป็นต้น
+                  const cgName = cgData.name || cgData.fullname || childSnapshot.key; 
+                  
+                  const option = document.createElement('option');
+                  option.value = cgName;
+                  option.text = `CG: ${cgName}`;
+                  spenderSelect.appendChild(option);
+              });
+          }
+          
+          // เพิ่มตัวเลือกมาตรฐานต่อท้ายรายชื่อ CG
+          spenderSelect.innerHTML += '<option value="ญาติผู้ป่วย">ญาติผู้ป่วย</option>';
+          spenderSelect.innerHTML += '<option value="เจ้าหน้าที่ รพ.สต.">เจ้าหน้าที่ รพ.สต.</option>';
+      });
+
+      // 2. โหลดข้อมูลผู้สูงอายุ (ผู้รับผ้าอ้อม)
+      // ⚠️ หมายเหตุ: เปลี่ยน 'elderly' เป็นชื่อ Path (Node) ที่คุณใช้เก็บข้อมูลผู้สูงอายุใน Firebase จริง
+      firebase.database().ref('elderly').on('value', function(snapshot) {
+          const receiverSelect = document.getElementById('diaperReceiver');
+          
+          // ล้างค่าเดิมก่อน
+          receiverSelect.innerHTML = '<option value="">-- เลือกผู้รับ --</option>';
+          
+          if (snapshot.exists()) {
+              snapshot.forEach(function(childSnapshot) {
+                  const elderlyData = childSnapshot.val();
+                  
+                  // ⚠️ หมายเหตุ: เปลี่ยน elderlyData.name เป็นชื่อฟิลด์ที่เก็บ "ชื่อ-สกุล" ผู้สูงอายุ
+                  const elderlyName = elderlyData.name || elderlyData.fullname || childSnapshot.key;
+                  
+                  const option = document.createElement('option');
+                  option.value = elderlyName;
+                  option.text = elderlyName;
+                  receiverSelect.appendChild(option);
+              });
+          }
+      });
+  }
+
+  // เรียกใช้งานฟังก์ชันทันทีที่โหลดหน้าเว็บ
+  loadDropdownDataFromFirebase();
 </script>
 </body>
 </html>
