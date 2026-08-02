@@ -521,7 +521,78 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <!-- ================= END สรุปข้อมูลผู้สูงอายุ ================= -->
 
   </div>
+<!-- TAB: จัดการผ้าอ้อม -->
+  <div class="tab-panel" id="tab-diaper">
+    
+    <!-- ส่วนที่ 1: การ์ดแสดงจำนวนสต๊อกคงเหลือ 5 ไซส์ -->
+    <div class="card">
+      <h2>📦 สต๊อกผ้าอ้อมคงเหลือ</h2>
+      <div class="grid-cards">
+        <div class="stat-box blue"><div class="lbl">ไซส์ S</div><div class="num" id="stock-S">0</div></div>
+        <div class="stat-box blue"><div class="lbl">ไซส์ M</div><div class="num" id="stock-M">0</div></div>
+        <div class="stat-box blue"><div class="lbl">ไซส์ L</div><div class="num" id="stock-L">0</div></div>
+        <div class="stat-box blue"><div class="lbl">ไซส์ XL</div><div class="num" id="stock-XL">0</div></div>
+        <div class="stat-box blue"><div class="lbl">ไซส์ XXL</div><div class="num" id="stock-XXL">0</div></div>
+      </div>
+    </div>
 
+    <!-- ส่วนที่ 2: ฟอร์มบันทึกรับเข้า / จ่ายออก -->
+    <div class="card">
+      <h2>➕ บันทึก รับเข้า / จ่ายออก ผ้าอ้อม</h2>
+      <div class="row">
+        <div class="field">
+          <label>ประเภทรายการ</label>
+          <select id="diaperAction">
+            <option value="in">📥 รับเข้า (เพิ่มสต๊อก)</option>
+            <option value="out">📤 จ่ายออก (ลดสต๊อก)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>ไซส์ผ้าอ้อม</label>
+          <select id="diaperSize">
+            <option value="S">ไซส์ S</option>
+            <option value="M">ไซส์ M</option>
+            <option value="L">ไซส์ L</option>
+            <option value="XL">ไซส์ XL</option>
+            <option value="XXL">ไซส์ XXL</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>จำนวน (ชิ้น/แพ็ค)</label>
+          <input type="number" id="diaperQty" min="1" value="1">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>หมายเหตุ (ระบุที่มา หรือ ชื่อผู้รับ)</label>
+          <input type="text" id="diaperNote" placeholder="เช่น รับบริจาคจาก..., จ่ายให้ตา..., หรืออื่นๆ">
+        </div>
+      </div>
+      <button class="btn btn-primary" style="margin-top: 14px;" type="button" onclick="saveDiaperStock()">💾 บันทึกรายการ</button>
+    </div>
+
+    <!-- ส่วนที่ 3: ตารางประวัติการทำรายการ -->
+    <div class="card">
+      <h2>🕒 ประวัติการเคลื่อนไหวสต๊อก</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>วันที่ - เวลา</th>
+              <th>ประเภท</th>
+              <th>ไซส์</th>
+              <th>จำนวน</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="diaperTableBody">
+            <tr><td colspan="5" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
   <!-- TAB 2: RECORD VISIT -->
   <div class="tab-panel" id="tab-record">
     <div class="card">
