@@ -542,7 +542,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       <div class="row">
         <div class="field">
           <label>ประเภทรายการ</label>
-          <select id="diaperAction">
+          <select id="diaperAction" onchange="toggleOutFields()">
             <option value="in">📥 รับเข้า (เพิ่มสต๊อก)</option>
             <option value="out">📤 จ่ายออก (ลดสต๊อก)</option>
           </select>
@@ -562,10 +562,41 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
           <input type="number" id="diaperQty" min="1" value="1">
         </div>
       </div>
+      
+      <!-- ส่วนที่เพิ่มเข้ามา: ฟิลด์สำหรับบันทึกการเบิกจ่าย (จะแสดงเมื่อเลือก 'จ่ายออก') -->
+      <div id="outFields" style="display: none;">
+        <div class="row">
+            <div class="field">
+                <label>วันที่จ่าย</label>
+                <input type="date" id="diaperDate">
+            </div>
+            <div class="field">
+                <label>ผู้เบิกจ่าย</label>
+                <!-- ในระบบจริง คุณอาจโหลดรายชื่อจากฐานข้อมูลมาแสดงใน Dropdown นี้ -->
+                <select id="diaperSpender">
+                    <option value="">-- เลือกผู้เบิกจ่าย --</option>
+                    <option value="CG 1">CG 1</option>
+                    <option value="CG 2">CG 2</option>
+                    <option value="ญาติผู้ป่วย">ญาติผู้ป่วย</option>
+                    <option value="เจ้าหน้าที่ รพ.สต.">เจ้าหน้าที่ รพ.สต.</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>ผู้รับผ้าอ้อม (ผู้สูงอายุ)</label>
+                <!-- ในระบบจริง คุณอาจโหลดรายชื่อจากฐานข้อมูลมาแสดงใน Dropdown นี้ -->
+                <select id="diaperReceiver">
+                    <option value="">-- เลือกผู้รับ --</option>
+                    <option value="คุณตา A">คุณตา A</option>
+                    <option value="คุณยาย B">คุณยาย B</option>
+                </select>
+            </div>
+        </div>
+      </div>
+
       <div class="row">
         <div class="field">
-          <label>หมายเหตุ (ระบุที่มา หรือ ชื่อผู้รับ)</label>
-          <input type="text" id="diaperNote" placeholder="เช่น รับบริจาคจาก..., จ่ายให้ตา..., หรืออื่นๆ">
+          <label>หมายเหตุ</label>
+          <input type="text" id="diaperNote" placeholder="เช่น รับบริจาคจาก...">
         </div>
       </div>
       <button class="btn btn-primary" style="margin-top: 14px;" type="button" onclick="saveDiaperStock()">💾 บันทึกรายการ</button>
@@ -582,15 +613,19 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
               <th>ประเภท</th>
               <th>ไซส์</th>
               <th>จำนวน</th>
+              <th>ผู้เบิกจ่าย</th>
+              <th>ผู้รับ</th>
               <th>หมายเหตุ</th>
             </tr>
           </thead>
           <tbody id="diaperTableBody">
-            <tr><td colspan="5" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
+            <tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+
+  </div>
 
   </div>
   <!-- TAB 2: RECORD VISIT -->
@@ -3725,12 +3760,54 @@ function formatThaiDateVeryShort(isoDate){
   // ตัวแปรสำหรับเก็บประวัติรายการ
   let diaperHistory = [];
 
+  // ฟังก์ชันสำหรับตั้งค่าวันที่ปัจจุบันเป็นค่าเริ่มต้น
+  function setDefaultDate() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById('diaperDate').value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  // เรียกใช้เมื่อโหลดหน้าเว็บเพื่อให้มีวันที่ค่าเริ่มต้น
+  setDefaultDate();
+
+  // ฟังก์ชันซ่อน/แสดง ฟิลด์ข้อมูลเพิ่มเติมเมื่อเลือกประเภทรายการ
+  function toggleOutFields() {
+      const action = document.getElementById('diaperAction').value;
+      const outFields = document.getElementById('outFields');
+      if (action === 'out') {
+          outFields.style.display = 'block';
+          // ตั้งค่าวันที่ปัจจุบันเมื่อเลือกจ่ายออก
+          setDefaultDate();
+      } else {
+          outFields.style.display = 'none';
+      }
+  }
+
   // ฟังก์ชันเมื่อกดปุ่ม "บันทึกรายการ"
   function saveDiaperStock() {
     const action = document.getElementById('diaperAction').value;
     const size = document.getElementById('diaperSize').value;
     const qty = parseInt(document.getElementById('diaperQty').value) || 0;
     const note = document.getElementById('diaperNote').value.trim();
+    
+    // ข้อมูลเพิ่มเติมสำหรับการจ่ายออก
+    let date = "";
+    let spender = "";
+    let receiver = "";
+
+    if (action === 'out') {
+        date = document.getElementById('diaperDate').value;
+        spender = document.getElementById('diaperSpender').value;
+        receiver = document.getElementById('diaperReceiver').value;
+
+        // ตรวจสอบความครบถ้วนของข้อมูล
+        if (!date || !spender || !receiver) {
+            alert("กรุณากรอก วันที่จ่าย, ผู้เบิกจ่าย และ ผู้รับผ้าอ้อม ให้ครบถ้วน");
+            return;
+        }
+    }
 
     // เช็คว่าจำนวนถูกต้องหรือไม่
     if(qty <= 0) {
@@ -3753,13 +3830,18 @@ function formatThaiDateVeryShort(isoDate){
 
     // สร้างข้อมูลบันทึกประวัติการทำรายการ
     const now = new Date();
-    const timestamp = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+    // ถ้าเป็นรับเข้า ใช้วันเวลาปัจจุบัน ถ้าจ่ายออก ใช้วันที่ที่เลือก
+    let displayTime = action === 'in' ? 
+        now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) :
+        new Date(date).toLocaleDateString('th-TH');
     
     const record = {
-      time: timestamp,
+      time: displayTime,
       action: action,
       size: size,
       qty: qty,
+      spender: spender,
+      receiver: receiver,
       note: note
     };
     
@@ -3769,14 +3851,12 @@ function formatThaiDateVeryShort(isoDate){
     // รีเซ็ตค่าในฟอร์มบางส่วน
     document.getElementById('diaperQty').value = 1;
     document.getElementById('diaperNote').value = "";
+    document.getElementById('diaperSpender').value = "";
+    document.getElementById('diaperReceiver').value = "";
+    setDefaultDate();
 
     // สั่งอัปเดตหน้าจอ
     updateDiaperUI();
-    
-    /* 
-      หากคุณใช้งาน Firebase Realtime Database สามารถเพิ่มโค้ดบันทึกข้อมูล
-      (diaperStocks และ diaperHistory) ลง Database ต่อได้บริเวณนี้
-    */
   }
 
   // ฟังก์ชันสำหรับอัปเดตหน้าจอ (ตัวเลขสต๊อก และ ตารางประวัติ)
@@ -3793,13 +3873,12 @@ function formatThaiDateVeryShort(isoDate){
     tbody.innerHTML = ""; // ล้างตารางเก่าก่อน
 
     if(diaperHistory.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
       return;
     }
 
     // สร้างแถวใหม่ตามข้อมูลประวัติ
     diaperHistory.forEach(item => {
-      // เลือกใช้ CSS Badge สีที่กำหนดไว้แล้วใน index.html
       let actionBadge = item.action === 'in' 
         ? '<span class="badge green">รับเข้า</span>' 
         : '<span class="badge orange">จ่ายออก</span>';
@@ -3810,6 +3889,8 @@ function formatThaiDateVeryShort(isoDate){
         <td>${actionBadge}</td>
         <td><b>${item.size}</b></td>
         <td>${item.qty}</td>
+        <td>${item.spender || '-'}</td>
+        <td>${item.receiver || '-'}</td>
         <td>${item.note || '-'}</td>
       `;
       tbody.appendChild(tr);
