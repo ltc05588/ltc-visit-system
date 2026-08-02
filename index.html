@@ -3717,6 +3717,104 @@ function formatThaiDateVeryShort(isoDate){
   const d = new Date(isoDate);
   return `${d.getDate()} ${THAI_MONTHS_ABBR[d.getMonth()]}`;
 }
+  // ตัวแปรสำหรับเก็บจำนวนสต๊อกผ้าอ้อม 5 ไซส์
+  let diaperStocks = {
+    S: 0, M: 0, L: 0, XL: 0, XXL: 0
+  };
+  
+  // ตัวแปรสำหรับเก็บประวัติรายการ
+  let diaperHistory = [];
+
+  // ฟังก์ชันเมื่อกดปุ่ม "บันทึกรายการ"
+  function saveDiaperStock() {
+    const action = document.getElementById('diaperAction').value;
+    const size = document.getElementById('diaperSize').value;
+    const qty = parseInt(document.getElementById('diaperQty').value) || 0;
+    const note = document.getElementById('diaperNote').value.trim();
+
+    // เช็คว่าจำนวนถูกต้องหรือไม่
+    if(qty <= 0) {
+      alert("กรุณาระบุจำนวนให้ถูกต้อง (มากกว่า 0)");
+      return;
+    }
+
+    // กรณีจ่ายออก ต้องเช็คว่าสต๊อกคงเหลือพอหรือไม่
+    if(action === 'out' && diaperStocks[size] < qty) {
+      alert(`❌ ไม่สามารถจ่ายออกได้! สต๊อกผ้าอ้อมไซส์ ${size} คงเหลือเพียง ${diaperStocks[size]} เท่านั้น`);
+      return;
+    }
+
+    // คำนวณอัปเดตสต๊อก
+    if(action === 'in') {
+      diaperStocks[size] += qty;
+    } else {
+      diaperStocks[size] -= qty;
+    }
+
+    // สร้างข้อมูลบันทึกประวัติการทำรายการ
+    const now = new Date();
+    const timestamp = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+    
+    const record = {
+      time: timestamp,
+      action: action,
+      size: size,
+      qty: qty,
+      note: note
+    };
+    
+    // นำประวัติไปเก็บไว้บนสุดของ Array (ให้รายการใหม่แสดงก่อน)
+    diaperHistory.unshift(record);
+
+    // รีเซ็ตค่าในฟอร์มบางส่วน
+    document.getElementById('diaperQty').value = 1;
+    document.getElementById('diaperNote').value = "";
+
+    // สั่งอัปเดตหน้าจอ
+    updateDiaperUI();
+    
+    /* 
+      หากคุณใช้งาน Firebase Realtime Database สามารถเพิ่มโค้ดบันทึกข้อมูล
+      (diaperStocks และ diaperHistory) ลง Database ต่อได้บริเวณนี้
+    */
+  }
+
+  // ฟังก์ชันสำหรับอัปเดตหน้าจอ (ตัวเลขสต๊อก และ ตารางประวัติ)
+  function updateDiaperUI() {
+    // 1. อัปเดตตัวเลขแสดงผลบนการ์ดทั้ง 5 ไซส์
+    document.getElementById('stock-S').innerText = diaperStocks.S;
+    document.getElementById('stock-M').innerText = diaperStocks.M;
+    document.getElementById('stock-L').innerText = diaperStocks.L;
+    document.getElementById('stock-XL').innerText = diaperStocks.XL;
+    document.getElementById('stock-XXL').innerText = diaperStocks.XXL;
+
+    // 2. อัปเดตตารางประวัติ
+    const tbody = document.getElementById('diaperTableBody');
+    tbody.innerHTML = ""; // ล้างตารางเก่าก่อน
+
+    if(diaperHistory.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
+      return;
+    }
+
+    // สร้างแถวใหม่ตามข้อมูลประวัติ
+    diaperHistory.forEach(item => {
+      // เลือกใช้ CSS Badge สีที่กำหนดไว้แล้วใน index.html
+      let actionBadge = item.action === 'in' 
+        ? '<span class="badge green">รับเข้า</span>' 
+        : '<span class="badge orange">จ่ายออก</span>';
+
+      let tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.time}</td>
+        <td>${actionBadge}</td>
+        <td><b>${item.size}</b></td>
+        <td>${item.qty}</td>
+        <td>${item.note || '-'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 </script>
 </body>
 </html>
