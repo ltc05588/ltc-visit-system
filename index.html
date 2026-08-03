@@ -903,7 +903,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
       </div>
       <div class="table-wrap">
         <table id="elderlyTable"><thead><tr>
-          <th>รหัส</th><th>ชื่อ</th><th>อายุ</th><th>เพศ</th><th>หมู่ที่</th><th>คะแนน ADL</th><th>TAI</th><th>กลุ่ม ADL</th><th>CG</th><th>โหมด PDF</th><th></th>
+          <th>รหัส</th><th>ชื่อ</th><th>อายุ</th><th>เพศ</th><th>หมู่ที่</th><th>คะแนน ADL</th><th>TAI</th><th>กลุ่ม ADL</th><th>CG</th><th>โหมด PDF</th><th>สถานะ</th><th></th>
         </tr></thead><tbody></tbody></table>
       </div>
     </div>
@@ -1449,6 +1449,16 @@ const THAI_DOW = ["อา","จ","อ","พ","พฤ","ศ","ส"];
 
 function beYear(gy){ return gy + 543; }
 function ceYear(be){ return be - 543; }
+
+// ผู้สูงอายุที่ "จำหน่ายออก" แล้ว (เสียชีวิต / ADL>11 / ย้ายออกนอกพื้นที่ / อื่นๆ)
+// จะถูกตัดออกจากระบบรายงานและสถิติทั้งหมด แต่ยังคงแสดง/แก้ไขได้ในหน้า "จัดการผู้สูงอายุ"
+function isElderlyDischarged(e){
+  return !!(e && e.dischargeStatus && e.dischargeStatus !== 'ยังไม่จำหน่าย');
+}
+// คืนค่ารหัสผู้สูงอายุที่ "ยังไม่จำหน่าย" เท่านั้น สำหรับใช้ในรายงาน/สถิติ/แดชบอร์ดทุกจุด
+function getActiveElderlyIds(){
+  return Object.keys(STATE.elderly || {}).filter(id=>!isElderlyDischarged(STATE.elderly[id]));
+}
 
 /* =========================================================
    TOAST
@@ -2096,7 +2106,7 @@ function renderCategoryPieChart(canvasId, counts, instanceKey){
 }
 
 function renderElderlySummary(){
-  const elderlyIds = Object.keys(STATE.elderly || {});
+  const elderlyIds = getActiveElderlyIds();
   const total = elderlyIds.length;
 
   /* ---------- 1. ภาพรวมตามคะแนน ADL (กลุ่มความเสี่ยง) ---------- */
@@ -2252,7 +2262,7 @@ function renderDashboard(){
   });
 
   const cgIds = Object.keys(STATE.cgs || {});
-  const elderlyIds = Object.keys(STATE.elderly || {});
+  const elderlyIds = getActiveElderlyIds();
   const elderlyVisitedThisMonthIds = new Set(visitsThisMonth.map(v=>v.elderlyId));
   const cgsWithVisitsThisMonth = new Set(visitsThisMonth.map(v=>v.cgCode));
 
@@ -2530,7 +2540,7 @@ function populateElderlySelectsForRecordTab(){
     document.getElementById('recInfoCard').innerHTML = '';
     return;
   }
-  const ids = Object.keys(STATE.elderly || {}).filter(id=>STATE.elderly[id].cgCode === chosenCg).sort();
+  const ids = Object.keys(STATE.elderly || {}).filter(id=>STATE.elderly[id].cgCode === chosenCg && !isElderlyDischarged(STATE.elderly[id])).sort();
   const cur = elderlySel.value;
   elderlySel.innerHTML = '<option value="">-- เลือกผู้สูงอายุ --</option>' + ids.map(id=>`<option value="${id}">${escapeHtml(STATE.elderly[id].name)}</option>`).join('');
   if(ids.includes(cur)) elderlySel.value = cur;
@@ -2546,7 +2556,7 @@ function renderRecMonthlyReport(){
   const cgCode = document.getElementById('recCg').value;
   if(!box || !Number.isFinite(be) || !Number.isFinite(month)){ return; }
 
-  const elderlyIds = Object.keys(STATE.elderly || {}).filter(id=>
+  const elderlyIds = getActiveElderlyIds().filter(id=>
     !cgCode || STATE.elderly[id].cgCode === cgCode
   );
   const required = elderlyIds.reduce((sum, id)=>
@@ -2811,7 +2821,7 @@ function renderCgTable(){
   }
   tbody.innerHTML = cgIds.map(id=>{
     const cg = STATE.cgs[id];
-    const elderlyCount = Object.keys(STATE.elderly||{}).filter(eid=>STATE.elderly[eid].cgCode===id).length;
+    const elderlyCount = getActiveElderlyIds().filter(eid=>STATE.elderly[eid].cgCode===id).length;
     return `<tr>
       <td>${id}</td>
       <td><a href="javascript:void(0)" class="cg-name-link" data-view-cg="${id}" style="color:var(--secondary);font-weight:600;text-decoration:underline;cursor:pointer;">${escapeHtml(cg.name)}</a></td>
@@ -2854,7 +2864,7 @@ function openCgDetailModal(cgId){
   const cg = STATE.cgs[cgId];
   if(!cg) return;
   document.getElementById('cgDetailModal').dataset.currentCgId = cgId;
-  const elderlyCount = Object.keys(STATE.elderly||{}).filter(eid=>STATE.elderly[eid].cgCode===cgId).length;
+  const elderlyCount = getActiveElderlyIds().filter(eid=>STATE.elderly[eid].cgCode===cgId).length;
   const row = (label, value) => `
     <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">
       <span style="color:var(--muted);font-size:0.82rem;">${label}</span>
@@ -2994,13 +3004,17 @@ function renderElderlyTable(){
     return (e.name||'').toLowerCase().includes(searchText) || (e.idCard||'').includes(searchText);
   });
   if(ids.length === 0){
-    tbody.innerHTML = `<tr><td colspan="11" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="empty-state">ไม่พบข้อมูลผู้สูงอายุ</td></tr>`;
     return;
   }
   tbody.innerHTML = ids.map(id=>{
     const e = STATE.elderly[id];
     const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : e.cgCode;
-    return `<tr>
+    const discharged = isElderlyDischarged(e);
+    const statusBadge = discharged
+      ? `<span class="badge orange" title="${escapeHtml(e.dischargeDate ? ('วันที่ '+e.dischargeDate) : '')}">จำหน่ายแล้ว</span>`
+      : `<span class="badge green">ใช้งาน</span>`;
+    return `<tr${discharged ? ' style="opacity:0.6;"' : ''}>
       <td>${id}</td>
       <td><a href="javascript:void(0)" class="elderly-name-link" data-view-e="${id}" style="color:var(--secondary);font-weight:600;text-decoration:underline;cursor:pointer;">${escapeHtml(e.name)}</a></td>
       <td>${e.age||'-'}</td>
@@ -3011,6 +3025,7 @@ function renderElderlyTable(){
       <td>${e.adlGroup||'-'}</td>
       <td>${escapeHtml(cgName)}</td>
       <td><span class="badge ${e.pdfMode==='obt'?'blue':'green'}">${e.pdfMode==='obt'?'อบต.':'ปกติ'}</span></td>
+      <td>${statusBadge}</td>
       <td>
         <button class="btn btn-outline btn-sm" data-edit-e="${id}">✏ แก้ไข</button>
         <button class="btn btn-danger btn-sm" data-del-e="${id}">🗑 ลบ</button>
@@ -3089,7 +3104,8 @@ function exportElderlyToExcel(){
 
 function renderLtcSummaryTable(){
   const counts = {};
-  Object.values(STATE.elderly || {}).forEach(e=>{
+  getActiveElderlyIds().forEach(id=>{
+    const e = STATE.elderly[id];
     (e.ltcSupport || []).forEach(item=>{
       counts[item] = (counts[item] || 0) + 1;
     });
@@ -3110,7 +3126,7 @@ function renderLtcTable(){
   const cgFilter = document.getElementById('filterLtcCg').value;
   const itemFilter = document.getElementById('filterLtcItem').value;
   const searchText = document.getElementById('searchLtc').value.trim().toLowerCase();
-  let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
+  let ids = getActiveElderlyIds().sort((a,b)=>{
     const ea = STATE.elderly[a], eb = STATE.elderly[b];
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
@@ -3155,7 +3171,7 @@ function exportLtcToExcel(){
   const cgFilter = document.getElementById('filterLtcCg').value;
   const itemFilter = document.getElementById('filterLtcItem').value;
   const searchText = document.getElementById('searchLtc').value.trim().toLowerCase();
-  let ids = Object.keys(STATE.elderly || {}).sort((a,b)=>{
+  let ids = getActiveElderlyIds().sort((a,b)=>{
     const ea = STATE.elderly[a], eb = STATE.elderly[b];
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
