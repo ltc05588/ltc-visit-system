@@ -2958,15 +2958,18 @@ async function saveCg(){
     };
     if(editId){
       await cgsRef.child(editId).update(data);
+      STATE.cgs[editId] = { ...(STATE.cgs[editId]||{}), ...data };
       showToast('แก้ไขข้อมูล CG เรียบร้อย','success');
     } else {
       const id = generateId('CG', Object.keys(STATE.cgs||{}));
       data.createdAt = Date.now();
       await cgsRef.child(id).set(data);
+      STATE.cgs[id] = data;
       showToast('เพิ่ม CG เรียบร้อย','success');
     }
     cgSelectedPhotoDataUrl = null;
     document.getElementById('cgModal').classList.remove('show');
+    refreshAllDependentUI();
   } catch(err){
     console.error(err);
     showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
@@ -2985,6 +2988,8 @@ async function deleteCg(cgId){
   const ok = await showConfirm('ต้องการลบ CG นี้ใช่หรือไม่?', 'ยืนยันการลบ');
   if(!ok) return;
   await cgsRef.child(cgId).remove();
+  delete STATE.cgs[cgId];
+  refreshAllDependentUI();
   showToast('ลบ CG เรียบร้อย','success');
 }
 
@@ -3489,15 +3494,18 @@ async function saveElderly(){
     };
     if(editId){
       await elderlyRef.child(editId).update(data);
+      STATE.elderly[editId] = { ...(STATE.elderly[editId]||{}), ...data };
       showToast('แก้ไขข้อมูลผู้สูงอายุเรียบร้อย','success');
     } else {
       const id = generateId('E', Object.keys(STATE.elderly||{}));
       data.createdAt = Date.now();
       await elderlyRef.child(id).set(data);
+      STATE.elderly[id] = data;
       showToast('เพิ่มผู้สูงอายุเรียบร้อย','success');
     }
     elderlySelectedPhotoDataUrl = null;
     document.getElementById('elderlyModal').classList.remove('show');
+    refreshAllDependentUI();
   } catch(err){
     console.error(err);
     showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
@@ -3514,6 +3522,9 @@ async function deleteElderly(eid){
   visitIdsToRemove.forEach(vid=> updates['/visits/'+vid] = null);
   updates['/elderly/'+eid] = null;
   await db.ref().update(updates);
+  delete STATE.elderly[eid];
+  visitIdsToRemove.forEach(vid=> delete STATE.visits[vid]);
+  refreshAllDependentUI();
   showToast('ลบผู้สูงอายุและข้อมูลการเยี่ยมที่เกี่ยวข้องเรียบร้อย','success');
 }
 
