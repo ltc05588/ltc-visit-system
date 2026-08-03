@@ -595,36 +595,6 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
             </div>
         </div>
       </div>
-      <!-- ส่วนที่เพิ่มเข้ามา: ฟิลด์สำหรับบันทึกการเบิกจ่าย (จะแสดงเมื่อเลือก 'จ่ายออก') -->
-      <div id="outFields" style="display: none;">
-        <div class="row">
-            <div class="field">
-                <label>วันที่จ่าย</label>
-                <input type="date" id="diaperDate">
-            </div>
-            <div class="field">
-                <label>ผู้เบิกจ่าย</label>
-                <!-- ในระบบจริง คุณอาจโหลดรายชื่อจากฐานข้อมูลมาแสดงใน Dropdown นี้ -->
-                <select id="diaperSpender">
-                    <option value="">-- เลือกผู้เบิกจ่าย --</option>
-                    <option value="CG 1">CG 1</option>
-                    <option value="CG 2">CG 2</option>
-                    <option value="ญาติผู้ป่วย">ญาติผู้ป่วย</option>
-                    <option value="เจ้าหน้าที่ รพ.สต.">เจ้าหน้าที่ รพ.สต.</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>ผู้รับผ้าอ้อม (ผู้สูงอายุ)</label>
-                <!-- ในระบบจริง คุณอาจโหลดรายชื่อจากฐานข้อมูลมาแสดงใน Dropdown นี้ -->
-                <select id="diaperReceiver">
-                    <option value="">-- เลือกผู้รับ --</option>
-                    <option value="คุณตา A">คุณตา A</option>
-                    <option value="คุณยาย B">คุณยาย B</option>
-                </select>
-            </div>
-        </div>
-      </div>
-
       <div class="row">
         <div class="field">
           <label>หมายเหตุ</label>
@@ -651,6 +621,98 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
             </tr>
           </thead>
           <tbody id="diaperTableBody">
+            <tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ================= แผ่นรองซับ ================= -->
+
+    <!-- ส่วนที่ 1: การ์ดแสดงจำนวนสต๊อกแผ่นรองซับคงเหลือ (L, XL, XXL) -->
+    <div class="card">
+      <h2>📦 สต๊อกแผ่นรองซับคงเหลือ</h2>
+      <div class="grid-cards">
+        <div class="stat-box blue"><div class="lbl">ไซส์ L</div><div class="num" id="stock-pad-L">0</div></div>
+        <div class="stat-box blue"><div class="lbl">ไซส์ XL</div><div class="num" id="stock-pad-XL">0</div></div>
+        <div class="stat-box blue"><div class="lbl">ไซส์ XXL</div><div class="num" id="stock-pad-XXL">0</div></div>
+      </div>
+    </div>
+
+    <!-- ส่วนที่ 2: ฟอร์มบันทึกรับเข้า / จ่ายออก แผ่นรองซับ -->
+    <div class="card">
+      <h2>➕ บันทึก รับเข้า / จ่ายออก แผ่นรองซับ</h2>
+      <div class="row">
+        <div class="field">
+          <label>ประเภทรายการ</label>
+          <select id="padAction" onchange="toggleOutFieldsPad()">
+            <option value="in">📥 รับเข้า (เพิ่มสต๊อก)</option>
+            <option value="out">📤 จ่ายออก (ลดสต๊อก)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>ไซส์แผ่นรองซับ</label>
+          <select id="padSize">
+            <option value="L">ไซส์ L</option>
+            <option value="XL">ไซส์ XL</option>
+            <option value="XXL">ไซส์ XXL</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>จำนวน (ชิ้น/แพ็ค)</label>
+          <input type="number" id="padQty" min="1" value="1">
+        </div>
+      </div>
+      <!-- ฟิลด์สำหรับบันทึกการเบิกจ่าย (จะแสดงเมื่อเลือก 'จ่ายออก') -->
+      <div id="outFieldsPad" style="display: none;">
+        <div class="row">
+            <div class="field">
+                <label>วันที่จ่าย</label>
+                <input type="date" id="padDate">
+            </div>
+            <div class="field">
+                <label>ผู้เบิกจ่าย</label>
+                <select id="padSpender">
+                    <option value="">-- เลือกผู้เบิกจ่าย --</option>
+                    <!-- ข้อมูล CG จะถูกดึงจากฐานข้อมูลมาใส่ตรงนี้อัตโนมัติ -->
+                </select>
+            </div>
+            <div class="field">
+                <label>ผู้รับแผ่นรองซับ (ผู้สูงอายุ)</label>
+                <select id="padReceiver">
+                    <option value="">-- เลือกผู้รับ --</option>
+                    <!-- ข้อมูลผู้สูงอายุ จะถูกดึงจากฐานข้อมูลมาใส่ตรงนี้อัตโนมัติ -->
+                </select>
+            </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>หมายเหตุ</label>
+          <input type="text" id="padNote" placeholder="เช่น รับบริจาคจาก...">
+        </div>
+      </div>
+      <button class="btn btn-primary" style="margin-top: 14px;" type="button" onclick="savePadStock()">💾 บันทึกรายการ</button>
+    </div>
+
+    <!-- ส่วนที่ 3: ตารางประวัติการทำรายการแผ่นรองซับ -->
+    <div class="card">
+      <h2>🕒 ประวัติการเคลื่อนไหวสต๊อกแผ่นรองซับ</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>วันที่ - เวลา</th>
+              <th>ประเภท</th>
+              <th>ไซส์</th>
+              <th>จำนวน</th>
+              <th>ผู้เบิกจ่าย</th>
+              <th>ผู้รับ</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="padTableBody">
             <tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
           </tbody>
         </table>
@@ -3792,17 +3854,27 @@ function formatThaiDateVeryShort(isoDate){
   // ตัวแปรสำหรับเก็บประวัติรายการ
   let diaperHistory = [];
 
-  // ฟังก์ชันสำหรับตั้งค่าวันที่ปัจจุบันเป็นค่าเริ่มต้น
-  function setDefaultDate() {
+  // ตัวแปรสำหรับเก็บจำนวนสต๊อกแผ่นรองซับ 3 ไซส์ (L, XL, XXL)
+  let padStocks = {
+    L: 0, XL: 0, XXL: 0
+  };
+
+  // ตัวแปรสำหรับเก็บประวัติรายการแผ่นรองซับ
+  let padHistory = [];
+
+  // ฟังก์ชันสำหรับตั้งค่าวันที่ปัจจุบันเป็นค่าเริ่มต้น (ใช้ร่วมกันได้ทั้งผ้าอ้อมและแผ่นรองซับ)
+  function setDefaultDate(elementId = 'diaperDate') {
       const today = new Date();
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       const dd = String(today.getDate()).padStart(2, '0');
-      document.getElementById('diaperDate').value = `${yyyy}-${mm}-${dd}`;
+      const el = document.getElementById(elementId);
+      if (el) el.value = `${yyyy}-${mm}-${dd}`;
   }
 
   // เรียกใช้เมื่อโหลดหน้าเว็บเพื่อให้มีวันที่ค่าเริ่มต้น
-  setDefaultDate();
+  setDefaultDate('diaperDate');
+  setDefaultDate('padDate');
 
   // ฟังก์ชันซ่อน/แสดง ฟิลด์ข้อมูลเพิ่มเติมเมื่อเลือกประเภทรายการ
   function toggleOutFields() {
@@ -3811,7 +3883,20 @@ function formatThaiDateVeryShort(isoDate){
       if (action === 'out') {
           outFields.style.display = 'block';
           // ตั้งค่าวันที่ปัจจุบันเมื่อเลือกจ่ายออก
-          setDefaultDate();
+          setDefaultDate('diaperDate');
+      } else {
+          outFields.style.display = 'none';
+      }
+  }
+
+  // ฟังก์ชันซ่อน/แสดง ฟิลด์ข้อมูลเพิ่มเติมสำหรับแผ่นรองซับ เมื่อเลือกประเภทรายการ
+  function toggleOutFieldsPad() {
+      const action = document.getElementById('padAction').value;
+      const outFields = document.getElementById('outFieldsPad');
+      if (action === 'out') {
+          outFields.style.display = 'block';
+          // ตั้งค่าวันที่ปัจจุบันเมื่อเลือกจ่ายออก
+          setDefaultDate('padDate');
       } else {
           outFields.style.display = 'none';
       }
@@ -3891,6 +3976,80 @@ function formatThaiDateVeryShort(isoDate){
     updateDiaperUI();
   }
 
+  // ฟังก์ชันเมื่อกดปุ่ม "บันทึกรายการ" สำหรับแผ่นรองซับ
+  function savePadStock() {
+    const action = document.getElementById('padAction').value;
+    const size = document.getElementById('padSize').value;
+    const qty = parseInt(document.getElementById('padQty').value) || 0;
+    const note = document.getElementById('padNote').value.trim();
+
+    // ข้อมูลเพิ่มเติมสำหรับการจ่ายออก
+    let date = "";
+    let spender = "";
+    let receiver = "";
+
+    if (action === 'out') {
+        date = document.getElementById('padDate').value;
+        spender = document.getElementById('padSpender').value;
+        receiver = document.getElementById('padReceiver').value;
+
+        // ตรวจสอบความครบถ้วนของข้อมูล
+        if (!date || !spender || !receiver) {
+            alert("กรุณากรอก วันที่จ่าย, ผู้เบิกจ่าย และ ผู้รับแผ่นรองซับ ให้ครบถ้วน");
+            return;
+        }
+    }
+
+    // เช็คว่าจำนวนถูกต้องหรือไม่
+    if(qty <= 0) {
+      alert("กรุณาระบุจำนวนให้ถูกต้อง (มากกว่า 0)");
+      return;
+    }
+
+    // กรณีจ่ายออก ต้องเช็คว่าสต๊อกคงเหลือพอหรือไม่
+    if(action === 'out' && padStocks[size] < qty) {
+      alert(`❌ ไม่สามารถจ่ายออกได้! สต๊อกแผ่นรองซับไซส์ ${size} คงเหลือเพียง ${padStocks[size]} เท่านั้น`);
+      return;
+    }
+
+    // คำนวณอัปเดตสต๊อก
+    if(action === 'in') {
+      padStocks[size] += qty;
+    } else {
+      padStocks[size] -= qty;
+    }
+
+    // สร้างข้อมูลบันทึกประวัติการทำรายการ
+    const now = new Date();
+    // ถ้าเป็นรับเข้า ใช้วันเวลาปัจจุบัน ถ้าจ่ายออก ใช้วันที่ที่เลือก
+    let displayTime = action === 'in' ?
+        now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) :
+        new Date(date).toLocaleDateString('th-TH');
+
+    const record = {
+      time: displayTime,
+      action: action,
+      size: size,
+      qty: qty,
+      spender: spender,
+      receiver: receiver,
+      note: note
+    };
+
+    // นำประวัติไปเก็บไว้บนสุดของ Array (ให้รายการใหม่แสดงก่อน)
+    padHistory.unshift(record);
+
+    // รีเซ็ตค่าในฟอร์มบางส่วน
+    document.getElementById('padQty').value = 1;
+    document.getElementById('padNote').value = "";
+    document.getElementById('padSpender').value = "";
+    document.getElementById('padReceiver').value = "";
+    setDefaultDate('padDate');
+
+    // สั่งอัปเดตหน้าจอ
+    updatePadUI();
+  }
+
   // ฟังก์ชันสำหรับอัปเดตหน้าจอ (ตัวเลขสต๊อก และ ตารางประวัติ)
   function updateDiaperUI() {
     // 1. อัปเดตตัวเลขแสดงผลบนการ์ดทั้ง 5 ไซส์
@@ -3928,57 +4087,104 @@ function formatThaiDateVeryShort(isoDate){
       tbody.appendChild(tr);
     });
   }
+
+  // ฟังก์ชันสำหรับอัปเดตหน้าจอแผ่นรองซับ (ตัวเลขสต๊อก และ ตารางประวัติ)
+  function updatePadUI() {
+    // 1. อัปเดตตัวเลขแสดงผลบนการ์ดทั้ง 3 ไซส์
+    document.getElementById('stock-pad-L').innerText = padStocks.L;
+    document.getElementById('stock-pad-XL').innerText = padStocks.XL;
+    document.getElementById('stock-pad-XXL').innerText = padStocks.XXL;
+
+    // 2. อัปเดตตารางประวัติ
+    const tbody = document.getElementById('padTableBody');
+    tbody.innerHTML = ""; // ล้างตารางเก่าก่อน
+
+    if(padHistory.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
+      return;
+    }
+
+    // สร้างแถวใหม่ตามข้อมูลประวัติ
+    padHistory.forEach(item => {
+      let actionBadge = item.action === 'in'
+        ? '<span class="badge green">รับเข้า</span>'
+        : '<span class="badge orange">จ่ายออก</span>';
+
+      let tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.time}</td>
+        <td>${actionBadge}</td>
+        <td><b>${item.size}</b></td>
+        <td>${item.qty}</td>
+        <td>${item.spender || '-'}</td>
+        <td>${item.receiver || '-'}</td>
+        <td>${item.note || '-'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
   // ฟังก์ชันดึงข้อมูล CG และผู้สูงอายุจาก Firebase มาใส่ใน Dropdown
+  // (ใช้ข้อมูลชุดเดียวกัน เติมให้ทั้งฟอร์มผ้าอ้อม และฟอร์มแผ่นรองซับ)
   function loadDropdownDataFromFirebase() {
       // 1. โหลดข้อมูล CG (ผู้เบิกจ่าย)
       // ⚠️ หมายเหตุ: เปลี่ยน 'cgs' เป็นชื่อ Path (Node) ที่คุณใช้เก็บข้อมูล CG ใน Firebase จริง
       firebase.database().ref('cgs').on('value', function(snapshot) {
-          const spenderSelect = document.getElementById('diaperSpender');
-          
-          // ล้างค่าเดิมก่อน (ให้เหลือแค่อันแรก)
-          spenderSelect.innerHTML = '<option value="">-- เลือกผู้เบิกจ่าย --</option>';
-          
-          if (snapshot.exists()) {
-              snapshot.forEach(function(childSnapshot) {
-                  const cgData = childSnapshot.val();
-                  
-                  // ⚠️ หมายเหตุ: เปลี่ยน cgData.name เป็นชื่อฟิลด์ที่เก็บ "ชื่อ-สกุล" ในฐานข้อมูลของคุณ
-                  // เช่น cgData.fullname, cgData.firstName เป็นต้น
-                  const cgName = cgData.name || cgData.fullname || childSnapshot.key; 
-                  
-                  const option = document.createElement('option');
-                  option.value = cgName;
-                  option.text = `CG: ${cgName}`;
-                  spenderSelect.appendChild(option);
-              });
-          }
-          
-          // เพิ่มตัวเลือกมาตรฐานต่อท้ายรายชื่อ CG
-          spenderSelect.innerHTML += '<option value="ญาติผู้ป่วย">ญาติผู้ป่วย</option>';
-          spenderSelect.innerHTML += '<option value="เจ้าหน้าที่ รพ.สต.">เจ้าหน้าที่ รพ.สต.</option>';
+          const spenderSelectIds = ['diaperSpender', 'padSpender'];
+
+          spenderSelectIds.forEach(function(id) {
+              const spenderSelect = document.getElementById(id);
+              if (!spenderSelect) return;
+
+              // ล้างค่าเดิมก่อน (ให้เหลือแค่อันแรก)
+              spenderSelect.innerHTML = '<option value="">-- เลือกผู้เบิกจ่าย --</option>';
+
+              if (snapshot.exists()) {
+                  snapshot.forEach(function(childSnapshot) {
+                      const cgData = childSnapshot.val();
+
+                      // ⚠️ หมายเหตุ: เปลี่ยน cgData.name เป็นชื่อฟิลด์ที่เก็บ "ชื่อ-สกุล" ในฐานข้อมูลของคุณ
+                      // เช่น cgData.fullname, cgData.firstName เป็นต้น
+                      const cgName = cgData.name || cgData.fullname || childSnapshot.key;
+
+                      const option = document.createElement('option');
+                      option.value = cgName;
+                      option.text = `CG: ${cgName}`;
+                      spenderSelect.appendChild(option);
+                  });
+              }
+
+              // เพิ่มตัวเลือกมาตรฐานต่อท้ายรายชื่อ CG
+              spenderSelect.innerHTML += '<option value="ญาติผู้ป่วย">ญาติผู้ป่วย</option>';
+              spenderSelect.innerHTML += '<option value="เจ้าหน้าที่ รพ.สต.">เจ้าหน้าที่ รพ.สต.</option>';
+          });
       });
 
-      // 2. โหลดข้อมูลผู้สูงอายุ (ผู้รับผ้าอ้อม)
+      // 2. โหลดข้อมูลผู้สูงอายุ (ผู้รับผ้าอ้อม / ผู้รับแผ่นรองซับ)
       // ⚠️ หมายเหตุ: เปลี่ยน 'elderly' เป็นชื่อ Path (Node) ที่คุณใช้เก็บข้อมูลผู้สูงอายุใน Firebase จริง
       firebase.database().ref('elderly').on('value', function(snapshot) {
-          const receiverSelect = document.getElementById('diaperReceiver');
-          
-          // ล้างค่าเดิมก่อน
-          receiverSelect.innerHTML = '<option value="">-- เลือกผู้รับ --</option>';
-          
-          if (snapshot.exists()) {
-              snapshot.forEach(function(childSnapshot) {
-                  const elderlyData = childSnapshot.val();
-                  
-                  // ⚠️ หมายเหตุ: เปลี่ยน elderlyData.name เป็นชื่อฟิลด์ที่เก็บ "ชื่อ-สกุล" ผู้สูงอายุ
-                  const elderlyName = elderlyData.name || elderlyData.fullname || childSnapshot.key;
-                  
-                  const option = document.createElement('option');
-                  option.value = elderlyName;
-                  option.text = elderlyName;
-                  receiverSelect.appendChild(option);
-              });
-          }
+          const receiverSelectIds = ['diaperReceiver', 'padReceiver'];
+
+          receiverSelectIds.forEach(function(id) {
+              const receiverSelect = document.getElementById(id);
+              if (!receiverSelect) return;
+
+              // ล้างค่าเดิมก่อน
+              receiverSelect.innerHTML = '<option value="">-- เลือกผู้รับ --</option>';
+
+              if (snapshot.exists()) {
+                  snapshot.forEach(function(childSnapshot) {
+                      const elderlyData = childSnapshot.val();
+
+                      // ⚠️ หมายเหตุ: เปลี่ยน elderlyData.name เป็นชื่อฟิลด์ที่เก็บ "ชื่อ-สกุล" ผู้สูงอายุ
+                      const elderlyName = elderlyData.name || elderlyData.fullname || childSnapshot.key;
+
+                      const option = document.createElement('option');
+                      option.value = elderlyName;
+                      option.text = elderlyName;
+                      receiverSelect.appendChild(option);
+                  });
+              }
+          });
       });
   }
 
