@@ -4222,10 +4222,34 @@ function formatThaiDateVeryShort(isoDate){
       navigator.serviceWorker.register('service-worker.js')
         .then(registration => {
           console.log('ServiceWorker registered with scope:', registration.scope);
+
+          // ตรวจสอบเวอร์ชันใหม่ทันทีที่โหลดหน้า (ปกติเบราว์เซอร์จะเช็คให้เองอยู่แล้ว
+          // แต่บางครั้งช้า จึงสั่งเช็คซ้ำด้วยตัวเองเพื่อลดปัญหาเว็บไม่อัปเดต)
+          registration.update();
+
+          // ถ้าเจอ Service Worker เวอร์ชันใหม่กำลังติดตั้ง ให้บอกมันทำงานทันที (ข้ามการรอ)
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && registration.waiting) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
         })
         .catch(error => {
           console.log('ServiceWorker registration failed:', error);
         });
+
+      // เมื่อ Service Worker เวอร์ชันใหม่เข้าควบคุมหน้าเว็บแล้ว ให้รีโหลดหน้าเว็บอัตโนมัติ 1 ครั้ง
+      // เพื่อให้ผู้ใช้เห็นข้อมูล/โค้ดล่าสุดโดยไม่ต้องกด Ctrl+Shift+R เอง
+      let refreshingForUpdate = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshingForUpdate) return;
+        refreshingForUpdate = true;
+        window.location.reload();
+      });
     });
   }
 </script>
