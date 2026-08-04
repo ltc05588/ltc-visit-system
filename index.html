@@ -1434,6 +1434,8 @@ const cgsRef = db.ref('cgs');
 const elderlyRef = db.ref('elderly');
 const visitsRef = db.ref('visits');
 const usersRef = db.ref('users');
+const diaperRef = db.ref('diaperStock');
+const padRef = db.ref('padStock');
 
 /* =========================================================
    STATE
@@ -3992,15 +3994,22 @@ function formatThaiDateVeryShort(isoDate){
     // นำประวัติไปเก็บไว้บนสุดของ Array (ให้รายการใหม่แสดงก่อน)
     diaperHistory.unshift(record);
 
+    // บันทึกข้อมูลลง Firebase เพื่อไม่ให้ข้อมูลหายเมื่อรีเฟรชหน้าเว็บ
+    diaperRef.set({ stocks: diaperStocks, history: diaperHistory })
+      .then(() => {
+        // สั่งอัปเดตหน้าจอหลังบันทึกสำเร็จ
+        updateDiaperUI();
+      })
+      .catch((err) => {
+        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง: " + err.message);
+      });
+
     // รีเซ็ตค่าในฟอร์มบางส่วน
     document.getElementById('diaperQty').value = 1;
     document.getElementById('diaperNote').value = "";
     document.getElementById('diaperSpender').value = "";
     document.getElementById('diaperReceiver').value = "";
     setDefaultDate();
-
-    // สั่งอัปเดตหน้าจอ
-    updateDiaperUI();
   }
 
   // ฟังก์ชันเมื่อกดปุ่ม "บันทึกรายการ" สำหรับแผ่นรองซับ
@@ -4066,15 +4075,22 @@ function formatThaiDateVeryShort(isoDate){
     // นำประวัติไปเก็บไว้บนสุดของ Array (ให้รายการใหม่แสดงก่อน)
     padHistory.unshift(record);
 
+    // บันทึกข้อมูลลง Firebase เพื่อไม่ให้ข้อมูลหายเมื่อรีเฟรชหน้าเว็บ
+    padRef.set({ stocks: padStocks, history: padHistory })
+      .then(() => {
+        // สั่งอัปเดตหน้าจอหลังบันทึกสำเร็จ
+        updatePadUI();
+      })
+      .catch((err) => {
+        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง: " + err.message);
+      });
+
     // รีเซ็ตค่าในฟอร์มบางส่วน
     document.getElementById('padQty').value = 1;
     document.getElementById('padNote').value = "";
     document.getElementById('padSpender').value = "";
     document.getElementById('padReceiver').value = "";
     setDefaultDate('padDate');
-
-    // สั่งอัปเดตหน้าจอ
-    updatePadUI();
   }
 
   // ฟังก์ชันสำหรับอัปเดตหน้าจอ (ตัวเลขสต๊อก และ ตารางประวัติ)
@@ -4215,8 +4231,31 @@ function formatThaiDateVeryShort(isoDate){
       });
   }
 
+  // ฟังก์ชันโหลดข้อมูลสต๊อก+ประวัติผ้าอ้อม และแผ่นรองซับ จาก Firebase
+  // (ทำให้ข้อมูลไม่หายเมื่อรีเฟรชหน้าเว็บ และซิงค์ข้อมูลล่าสุดจากทุกอุปกรณ์)
+  function loadDiaperPadDataFromFirebase() {
+      diaperRef.on('value', function(snapshot) {
+          const data = snapshot.val();
+          if (data) {
+              diaperStocks = data.stocks || { S: 0, M: 0, L: 0, XL: 0, XXL: 0 };
+              diaperHistory = data.history || [];
+          }
+          updateDiaperUI();
+      });
+
+      padRef.on('value', function(snapshot) {
+          const data = snapshot.val();
+          if (data) {
+              padStocks = data.stocks || { L: 0, XL: 0, XXL: 0 };
+              padHistory = data.history || [];
+          }
+          updatePadUI();
+      });
+  }
+
   // เรียกใช้งานฟังก์ชันทันทีที่โหลดหน้าเว็บ
   loadDropdownDataFromFirebase();
+  loadDiaperPadDataFromFirebase();
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('service-worker.js')
