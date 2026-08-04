@@ -1375,6 +1375,10 @@ const cgsRef = db.ref('cgs');
 const elderlyRef = db.ref('elderly');
 const visitsRef = db.ref('visits');
 const usersRef = db.ref('users');
+const diaperStocksRef = db.ref('diaperStocks');
+const diaperHistoryRef = db.ref('diaperHistory');
+const padStocksRef = db.ref('padStocks');
+const padHistoryRef = db.ref('padHistory');
 
 /* =========================================================
    STATE
@@ -3787,12 +3791,12 @@ function formatThaiDateVeryShort(isoDate){
   const d = new Date(isoDate);
   return `${d.getDate()} ${THAI_MONTHS_ABBR[d.getMonth()]}`;
 }
-  // ตัวแปรสำหรับเก็บจำนวนสต๊อกผ้าอ้อม 5 ไซส์
+  // ตัวแปรสำหรับเก็บจำนวนสต๊อกผ้าอ้อม 5 ไซส์ (ซิงค์กับ Firebase แบบเรียลไทม์)
   let diaperStocks = {
     S: 0, M: 0, L: 0, XL: 0, XXL: 0
   };
-  
-  // ตัวแปรสำหรับเก็บประวัติรายการ
+
+  // ตัวแปรสำหรับเก็บประวัติรายการ (ซิงค์กับ Firebase แบบเรียลไทม์)
   let diaperHistory = [];
 
   // ฟังก์ชันเมื่อกดปุ่ม "บันทึกรายการ"
@@ -3809,54 +3813,47 @@ function formatThaiDateVeryShort(isoDate){
     }
 
     // กรณีจ่ายออก ต้องเช็คว่าสต๊อกคงเหลือพอหรือไม่
-    if(action === 'out' && diaperStocks[size] < qty) {
-      alert(`❌ ไม่สามารถจ่ายออกได้! สต๊อกผ้าอ้อมไซส์ ${size} คงเหลือเพียง ${diaperStocks[size]} เท่านั้น`);
+    if(action === 'out' && (diaperStocks[size]||0) < qty) {
+      alert(`❌ ไม่สามารถจ่ายออกได้! สต๊อกผ้าอ้อมไซส์ ${size} คงเหลือเพียง ${diaperStocks[size]||0} เท่านั้น`);
       return;
     }
 
-    // คำนวณอัปเดตสต๊อก
-    if(action === 'in') {
-      diaperStocks[size] += qty;
-    } else {
-      diaperStocks[size] -= qty;
-    }
+    // คำนวณค่าสต๊อกใหม่
+    const newQty = action === 'in'
+      ? (diaperStocks[size]||0) + qty
+      : (diaperStocks[size]||0) - qty;
 
     // สร้างข้อมูลบันทึกประวัติการทำรายการ
     const now = new Date();
     const timestamp = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
-    
+
     const record = {
       time: timestamp,
+      ts: now.getTime(),
       action: action,
       size: size,
       qty: qty,
       note: note
     };
-    
-    // นำประวัติไปเก็บไว้บนสุดของ Array (ให้รายการใหม่แสดงก่อน)
-    diaperHistory.unshift(record);
+
+    // บันทึกสต๊อกและประวัติลง Firebase Realtime Database
+    // (diaperStocksRef.on('value',...) ด้านล่างจะรับข้อมูลกลับมาอัปเดตหน้าจอให้อัตโนมัติ)
+    diaperStocksRef.child(size).set(newQty);
+    diaperHistoryRef.push(record);
 
     // รีเซ็ตค่าในฟอร์มบางส่วน
     document.getElementById('diaperQty').value = 1;
     document.getElementById('diaperNote').value = "";
-
-    // สั่งอัปเดตหน้าจอ
-    updateDiaperUI();
-    
-    /* 
-      หากคุณใช้งาน Firebase Realtime Database สามารถเพิ่มโค้ดบันทึกข้อมูล
-      (diaperStocks และ diaperHistory) ลง Database ต่อได้บริเวณนี้
-    */
   }
 
   // ฟังก์ชันสำหรับอัปเดตหน้าจอ (ตัวเลขสต๊อก และ ตารางประวัติ)
   function updateDiaperUI() {
     // 1. อัปเดตตัวเลขแสดงผลบนการ์ดทั้ง 5 ไซส์
-    document.getElementById('stock-S').innerText = diaperStocks.S;
-    document.getElementById('stock-M').innerText = diaperStocks.M;
-    document.getElementById('stock-L').innerText = diaperStocks.L;
-    document.getElementById('stock-XL').innerText = diaperStocks.XL;
-    document.getElementById('stock-XXL').innerText = diaperStocks.XXL;
+    document.getElementById('stock-S').innerText = diaperStocks.S || 0;
+    document.getElementById('stock-M').innerText = diaperStocks.M || 0;
+    document.getElementById('stock-L').innerText = diaperStocks.L || 0;
+    document.getElementById('stock-XL').innerText = diaperStocks.XL || 0;
+    document.getElementById('stock-XXL').innerText = diaperStocks.XXL || 0;
 
     // 2. อัปเดตตารางประวัติ
     const tbody = document.getElementById('diaperTableBody');
@@ -3886,13 +3883,26 @@ function formatThaiDateVeryShort(isoDate){
     });
   }
 
+  // ซิงค์สต๊อก/ประวัติผ้าอ้อมแบบเรียลไทม์กับ Firebase
+  diaperStocksRef.on('value', snap=>{
+    diaperStocks = snap.val() || { S:0, M:0, L:0, XL:0, XXL:0 };
+    updateDiaperUI();
+  });
+  diaperHistoryRef.on('value', snap=>{
+    const val = snap.val() || {};
+    diaperHistory = Object.keys(val)
+      .map(key => val[key])
+      .sort((a,b)=> (b.ts||0) - (a.ts||0));
+    updateDiaperUI();
+  });
+
   // ===================== สต๊อกแผ่นรองซับ =====================
-  // ตัวแปรสำหรับเก็บจำนวนสต๊อกแผ่นรองซับ 5 ไซส์
+  // ตัวแปรสำหรับเก็บจำนวนสต๊อกแผ่นรองซับ 5 ไซส์ (ซิงค์กับ Firebase แบบเรียลไทม์)
   let padStocks = {
     S: 0, M: 0, L: 0, XL: 0, XXL: 0
   };
 
-  // ตัวแปรสำหรับเก็บประวัติรายการ
+  // ตัวแปรสำหรับเก็บประวัติรายการ (ซิงค์กับ Firebase แบบเรียลไทม์)
   let padHistory = [];
 
   // ฟังก์ชันเมื่อกดปุ่ม "บันทึกรายการ" (แผ่นรองซับ)
@@ -3909,17 +3919,15 @@ function formatThaiDateVeryShort(isoDate){
     }
 
     // กรณีจ่ายออก ต้องเช็คว่าสต๊อกคงเหลือพอหรือไม่
-    if(action === 'out' && padStocks[size] < qty) {
-      alert(`❌ ไม่สามารถจ่ายออกได้! สต๊อกแผ่นรองซับไซส์ ${size} คงเหลือเพียง ${padStocks[size]} เท่านั้น`);
+    if(action === 'out' && (padStocks[size]||0) < qty) {
+      alert(`❌ ไม่สามารถจ่ายออกได้! สต๊อกแผ่นรองซับไซส์ ${size} คงเหลือเพียง ${padStocks[size]||0} เท่านั้น`);
       return;
     }
 
-    // คำนวณอัปเดตสต๊อก
-    if(action === 'in') {
-      padStocks[size] += qty;
-    } else {
-      padStocks[size] -= qty;
-    }
+    // คำนวณค่าสต๊อกใหม่
+    const newQty = action === 'in'
+      ? (padStocks[size]||0) + qty
+      : (padStocks[size]||0) - qty;
 
     // สร้างข้อมูลบันทึกประวัติการทำรายการ
     const now = new Date();
@@ -3927,36 +3935,30 @@ function formatThaiDateVeryShort(isoDate){
 
     const record = {
       time: timestamp,
+      ts: now.getTime(),
       action: action,
       size: size,
       qty: qty,
       note: note
     };
 
-    // นำประวัติไปเก็บไว้บนสุดของ Array (ให้รายการใหม่แสดงก่อน)
-    padHistory.unshift(record);
+    // บันทึกสต๊อกและประวัติลง Firebase Realtime Database
+    padStocksRef.child(size).set(newQty);
+    padHistoryRef.push(record);
 
     // รีเซ็ตค่าในฟอร์มบางส่วน
     document.getElementById('padQty').value = 1;
     document.getElementById('padNote').value = "";
-
-    // สั่งอัปเดตหน้าจอ
-    updatePadUI();
-
-    /* 
-      หากคุณใช้งาน Firebase Realtime Database สามารถเพิ่มโค้ดบันทึกข้อมูล
-      (padStocks และ padHistory) ลง Database ต่อได้บริเวณนี้
-    */
   }
 
   // ฟังก์ชันสำหรับอัปเดตหน้าจอ (ตัวเลขสต๊อก และ ตารางประวัติ) ของแผ่นรองซับ
   function updatePadUI() {
     // 1. อัปเดตตัวเลขแสดงผลบนการ์ดทั้ง 5 ไซส์
-    document.getElementById('pad-stock-S').innerText = padStocks.S;
-    document.getElementById('pad-stock-M').innerText = padStocks.M;
-    document.getElementById('pad-stock-L').innerText = padStocks.L;
-    document.getElementById('pad-stock-XL').innerText = padStocks.XL;
-    document.getElementById('pad-stock-XXL').innerText = padStocks.XXL;
+    document.getElementById('pad-stock-S').innerText = padStocks.S || 0;
+    document.getElementById('pad-stock-M').innerText = padStocks.M || 0;
+    document.getElementById('pad-stock-L').innerText = padStocks.L || 0;
+    document.getElementById('pad-stock-XL').innerText = padStocks.XL || 0;
+    document.getElementById('pad-stock-XXL').innerText = padStocks.XXL || 0;
 
     // 2. อัปเดตตารางประวัติ
     const tbody = document.getElementById('padTableBody');
@@ -3985,6 +3987,19 @@ function formatThaiDateVeryShort(isoDate){
       tbody.appendChild(tr);
     });
   }
+
+  // ซิงค์สต๊อก/ประวัติแผ่นรองซับแบบเรียลไทม์กับ Firebase
+  padStocksRef.on('value', snap=>{
+    padStocks = snap.val() || { S:0, M:0, L:0, XL:0, XXL:0 };
+    updatePadUI();
+  });
+  padHistoryRef.on('value', snap=>{
+    const val = snap.val() || {};
+    padHistory = Object.keys(val)
+      .map(key => val[key])
+      .sort((a,b)=> (b.ts||0) - (a.ts||0));
+    updatePadUI();
+  });
 </script>
 </body>
 </html>
