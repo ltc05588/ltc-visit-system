@@ -2998,6 +2998,11 @@ async function deleteCg(cgId){
 /* =========================================================
    ===================  MANAGE ELDERLY TAB  ===================
 ========================================================= */
+function canDeleteElderly(){
+  // เฉพาะ owner และ admin เท่านั้นที่มองเห็น/ใช้ปุ่ม "ลบ" ผู้สูงอายุได้ user เห็นได้แค่ปุ่มแก้ไข
+  return !!(CURRENT_USER && (CURRENT_USER.role === 'owner' || CURRENT_USER.role === 'admin'));
+}
+
 function renderElderlyTable(){
   const cgFilter = document.getElementById('filterElderlyCg').value;
   const modeFilter = document.getElementById('filterElderlyMode').value;
@@ -3035,7 +3040,7 @@ function renderElderlyTable(){
       <td>${statusBadge}</td>
       <td>
         <button class="btn btn-outline btn-sm" data-edit-e="${id}">✏ แก้ไข</button>
-        <button class="btn btn-danger btn-sm" data-del-e="${id}">🗑 ลบ</button>
+        ${canDeleteElderly() ? `<button class="btn btn-danger btn-sm" data-del-e="${id}">🗑 ลบ</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -3517,6 +3522,10 @@ async function saveElderly(){
 }
 
 async function deleteElderly(eid){
+  if(!canDeleteElderly()){
+    showToast('สิทธิ์ User ไม่สามารถลบข้อมูลผู้สูงอายุได้ (เฉพาะ Owner และ Admin เท่านั้น)', 'error');
+    return;
+  }
   const ok = await showConfirm('ต้องการลบผู้สูงอายุนี้ใช่หรือไม่? ข้อมูลการเยี่ยมทั้งหมดของบุคคลนี้จะถูกลบด้วย', 'ยืนยันการลบ');
   if(!ok) return;
   const visitIdsToRemove = Object.keys(STATE.visits||{}).filter(vid=>STATE.visits[vid].elderlyId === eid);
