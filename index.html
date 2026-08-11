@@ -1668,6 +1668,8 @@ auth.onAuthStateChanged(async (fbUser)=>{
     document.getElementById('userBadge').style.display = 'none';
     document.getElementById('usersTabBtn').style.display = 'none';
     goToDashboardTab();
+    if(typeof updateDiaperUI === 'function') updateDiaperUI();
+    if(typeof updatePadUI === 'function') updatePadUI();
     return;
   }
   // fetch / create profile
@@ -1705,6 +1707,10 @@ auth.onAuthStateChanged(async (fbUser)=>{
   document.getElementById('userBadgeRole').textContent = ROLE_LABELS[CURRENT_USER.role] || CURRENT_USER.role;
   document.getElementById('usersTabBtn').style.display = CURRENT_USER.role === 'owner' ? '' : 'none';
   document.getElementById('addCgBtn').style.display = CURRENT_USER.role === 'user' ? 'none' : '';
+
+  // รีเฟรชตารางประวัติผ้าอ้อม/แผ่นรองซับ เพื่อให้ปุ่มแก้ไข/ลบ (เฉพาะ Owner/Admin) แสดงผลถูกต้องหลังล็อกอิน
+  if(typeof updateDiaperUI === 'function') updateDiaperUI();
+  if(typeof updatePadUI === 'function') updatePadUI();
 
   if(!usersListenerBound){
     usersListenerBound = true;
