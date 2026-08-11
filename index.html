@@ -4171,7 +4171,10 @@ function formatThaiDateVeryShort(isoDate){
         : '<span class="badge orange">จ่ายออก</span>';
 
       let manageCell = canManageStockHistory()
-        ? `<button class="btn btn-outline btn-sm" onclick="openStockEditModal('diaper', ${idx})">✏️ แก้ไข</button>`
+        ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+             <button class="btn btn-outline btn-sm" onclick="openStockEditModal('diaper', ${idx})">✏️ แก้ไข</button>
+             <button class="btn btn-danger btn-sm" onclick="deleteStockRecordDirect('diaper', ${idx})">🗑️ ลบรายการ</button>
+           </div>`
         : '-';
 
       let tr = document.createElement('tr');
@@ -4212,7 +4215,10 @@ function formatThaiDateVeryShort(isoDate){
         : '<span class="badge orange">จ่ายออก</span>';
 
       let manageCell = canManageStockHistory()
-        ? `<button class="btn btn-outline btn-sm" onclick="openStockEditModal('pad', ${idx})">✏️ แก้ไข</button>`
+        ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+             <button class="btn btn-outline btn-sm" onclick="openStockEditModal('pad', ${idx})">✏️ แก้ไข</button>
+             <button class="btn btn-danger btn-sm" onclick="deleteStockRecordDirect('pad', ${idx})">🗑️ ลบรายการ</button>
+           </div>`
         : '-';
 
       let tr = document.createElement('tr');
@@ -4360,6 +4366,17 @@ function formatThaiDateVeryShort(isoDate){
       .catch((err) => {
         alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง: ' + err.message);
       });
+  }
+
+  // ลบรายการโดยตรงจากปุ่มในตาราง (ไม่ต้องเปิดหน้าต่างแก้ไขก่อน)
+  async function deleteStockRecordDirect(type, idx){
+    if(!canManageStockHistory()){
+      showToast('เฉพาะ Owner และ Admin เท่านั้นที่สามารถลบรายการนี้ได้', 'error');
+      return;
+    }
+    document.getElementById('stockEditType').value = type;
+    document.getElementById('stockEditIndex').value = idx;
+    await deleteStockEditRecord();
   }
 
   document.getElementById('stockEditCancelBtn').addEventListener('click', closeStockEditModal);
