@@ -618,10 +618,11 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
               <th>ผู้เบิกจ่าย</th>
               <th>ผู้รับ</th>
               <th>หมายเหตุ</th>
+              <th>จัดการ</th>
             </tr>
           </thead>
           <tbody id="diaperTableBody">
-            <tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
+            <tr><td colspan="8" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
           </tbody>
         </table>
       </div>
@@ -710,10 +711,11 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
               <th>ผู้เบิกจ่าย</th>
               <th>ผู้รับ</th>
               <th>หมายเหตุ</th>
+              <th>จัดการ</th>
             </tr>
           </thead>
           <tbody id="padTableBody">
-            <tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
+            <tr><td colspan="8" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>
           </tbody>
         </table>
       </div>
@@ -1403,6 +1405,48 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div id="selectVisitList" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto;"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" id="selectVisitCancelBtn">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diaper/Pad Stock History Edit Modal (Owner/Admin only) -->
+<div class="modal-overlay" id="stockEditModal">
+  <div class="modal-box">
+    <h3 id="stockEditModalTitle">แก้ไขรายการ</h3>
+    <input type="hidden" id="stockEditType">
+    <input type="hidden" id="stockEditIndex">
+    <div class="row">
+      <div class="field">
+        <label>วันที่ - เวลา</label>
+        <input type="text" id="stockEditTime">
+      </div>
+      <div class="field">
+        <label>ประเภทรายการ</label>
+        <select id="stockEditAction">
+          <option value="in">📥 รับเข้า (เพิ่มสต๊อก)</option>
+          <option value="out">📤 จ่ายออก (ลดสต๊อก)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>ไซส์</label>
+        <select id="stockEditSize"></select>
+      </div>
+      <div class="field">
+        <label>จำนวน (ชิ้น/แพ็ค)</label>
+        <input type="number" id="stockEditQty" min="1" value="1">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>ผู้เบิกจ่าย</label><input type="text" id="stockEditSpender"></div>
+      <div class="field"><label>ผู้รับ</label><input type="text" id="stockEditReceiver"></div>
+    </div>
+    <div class="field"><label>หมายเหตุ</label><input type="text" id="stockEditNote"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="stockEditCancelBtn">ยกเลิก</button>
+      <button class="btn btn-danger" id="stockEditDeleteBtn">🗑️ ลบรายการ</button>
+      <button class="btn btn-primary" id="stockEditSaveBtn">💾 บันทึกการแก้ไข</button>
     </div>
   </div>
 </div>
@@ -4116,15 +4160,19 @@ function formatThaiDateVeryShort(isoDate){
     tbody.innerHTML = ""; // ล้างตารางเก่าก่อน
 
     if(diaperHistory.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
       return;
     }
 
     // สร้างแถวใหม่ตามข้อมูลประวัติ
-    diaperHistory.forEach(item => {
+    diaperHistory.forEach((item, idx) => {
       let actionBadge = item.action === 'in' 
         ? '<span class="badge green">รับเข้า</span>' 
         : '<span class="badge orange">จ่ายออก</span>';
+
+      let manageCell = canManageStockHistory()
+        ? `<button class="btn btn-outline btn-sm" onclick="openStockEditModal('diaper', ${idx})">✏️ แก้ไข</button>`
+        : '-';
 
       let tr = document.createElement('tr');
       tr.innerHTML = `
@@ -4135,6 +4183,7 @@ function formatThaiDateVeryShort(isoDate){
         <td>${item.spender || '-'}</td>
         <td>${item.receiver || '-'}</td>
         <td>${item.note || '-'}</td>
+        <td>${manageCell}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -4152,15 +4201,19 @@ function formatThaiDateVeryShort(isoDate){
     tbody.innerHTML = ""; // ล้างตารางเก่าก่อน
 
     if(padHistory.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">ยังไม่มีประวัติการทำรายการ</td></tr>';
       return;
     }
 
     // สร้างแถวใหม่ตามข้อมูลประวัติ
-    padHistory.forEach(item => {
+    padHistory.forEach((item, idx) => {
       let actionBadge = item.action === 'in'
         ? '<span class="badge green">รับเข้า</span>'
         : '<span class="badge orange">จ่ายออก</span>';
+
+      let manageCell = canManageStockHistory()
+        ? `<button class="btn btn-outline btn-sm" onclick="openStockEditModal('pad', ${idx})">✏️ แก้ไข</button>`
+        : '-';
 
       let tr = document.createElement('tr');
       tr.innerHTML = `
@@ -4171,10 +4224,148 @@ function formatThaiDateVeryShort(isoDate){
         <td>${item.spender || '-'}</td>
         <td>${item.receiver || '-'}</td>
         <td>${item.note || '-'}</td>
+        <td>${manageCell}</td>
       `;
       tbody.appendChild(tr);
     });
   }
+  // ตรวจสอบสิทธิ์: เฉพาะ Owner และ Admin เท่านั้นที่แก้ไข/ลบประวัติผ้าอ้อม-แผ่นรองซับได้ (ป้องกันข้อมูลซ้ำ/ผิดพลาด)
+  function canManageStockHistory(){
+    return !!(CURRENT_USER && (CURRENT_USER.role === 'owner' || CURRENT_USER.role === 'admin'));
+  }
+
+  // ขนาดที่ใช้ได้ของแต่ละประเภท
+  const STOCK_SIZE_OPTIONS = {
+    diaper: ['S','M','L','XL','XXL'],
+    pad: ['L','XL','XXL']
+  };
+
+  // เปิดหน้าต่างแก้ไขรายการประวัติ (เรียกจากปุ่ม "แก้ไข" ในตาราง)
+  function openStockEditModal(type, idx){
+    if(!canManageStockHistory()){
+      showToast('เฉพาะ Owner และ Admin เท่านั้นที่สามารถแก้ไขรายการนี้ได้', 'error');
+      return;
+    }
+    const list = type === 'diaper' ? diaperHistory : padHistory;
+    const rec = list[idx];
+    if(!rec) return;
+
+    document.getElementById('stockEditType').value = type;
+    document.getElementById('stockEditIndex').value = idx;
+    document.getElementById('stockEditModalTitle').textContent =
+      type === 'diaper' ? 'แก้ไขรายการผ้าอ้อม' : 'แก้ไขรายการแผ่นรองซับ';
+
+    const sizeSelect = document.getElementById('stockEditSize');
+    sizeSelect.innerHTML = STOCK_SIZE_OPTIONS[type].map(s => `<option value="${s}">ไซส์ ${s}</option>`).join('');
+
+    document.getElementById('stockEditTime').value = rec.time || '';
+    document.getElementById('stockEditAction').value = rec.action || 'in';
+    sizeSelect.value = rec.size || STOCK_SIZE_OPTIONS[type][0];
+    document.getElementById('stockEditQty').value = rec.qty || 1;
+    document.getElementById('stockEditSpender').value = rec.spender || '';
+    document.getElementById('stockEditReceiver').value = rec.receiver || '';
+    document.getElementById('stockEditNote').value = rec.note || '';
+
+    document.getElementById('stockEditModal').classList.add('show');
+  }
+
+  function closeStockEditModal(){
+    document.getElementById('stockEditModal').classList.remove('show');
+  }
+
+  // ผลกระทบต่อสต๊อกของรายการ (รับเข้า = +qty, จ่ายออก = -qty)
+  function stockContribution(rec){
+    return rec.action === 'in' ? rec.qty : -rec.qty;
+  }
+
+  // บันทึกการแก้ไขรายการ: ย้อนผลของรายการเดิมออกจากสต๊อก แล้วใส่ผลของรายการใหม่กลับเข้าไป
+  async function saveStockEditRecord(){
+    if(!canManageStockHistory()) return;
+    const type = document.getElementById('stockEditType').value;
+    const idx = parseInt(document.getElementById('stockEditIndex').value);
+    const list = type === 'diaper' ? diaperHistory : padHistory;
+    const stocks = type === 'diaper' ? diaperStocks : padStocks;
+    const ref = type === 'diaper' ? diaperRef : padRef;
+    const oldRec = list[idx];
+    if(!oldRec) return;
+
+    const newRec = {
+      time: document.getElementById('stockEditTime').value.trim() || oldRec.time,
+      action: document.getElementById('stockEditAction').value,
+      size: document.getElementById('stockEditSize').value,
+      qty: parseInt(document.getElementById('stockEditQty').value) || 0,
+      spender: document.getElementById('stockEditSpender').value.trim(),
+      receiver: document.getElementById('stockEditReceiver').value.trim(),
+      note: document.getElementById('stockEditNote').value.trim()
+    };
+
+    if(newRec.qty <= 0){
+      alert('กรุณาระบุจำนวนให้ถูกต้อง (มากกว่า 0)');
+      return;
+    }
+
+    // คำนวณสต๊อกใหม่: ย้อนรายการเดิมออก แล้วใส่รายการที่แก้ไขแล้วเข้าไป
+    const updatedStocks = Object.assign({}, stocks);
+    updatedStocks[oldRec.size] = (updatedStocks[oldRec.size] || 0) - stockContribution(oldRec);
+    updatedStocks[newRec.size] = (updatedStocks[newRec.size] || 0) + stockContribution(newRec);
+
+    const hasNegative = Object.values(updatedStocks).some(v => v < 0);
+    if(hasNegative){
+      const ok = await showConfirm('การแก้ไขนี้จะทำให้สต๊อกคงเหลือบางไซส์ติดลบ ต้องการดำเนินการต่อหรือไม่?', 'ยืนยันการแก้ไข');
+      if(!ok) return;
+    }
+
+    list[idx] = newRec;
+    if(type === 'diaper'){ diaperStocks = updatedStocks; } else { padStocks = updatedStocks; }
+
+    ref.set({ stocks: updatedStocks, history: list })
+      .then(() => {
+        closeStockEditModal();
+        if(type === 'diaper'){ updateDiaperUI(); } else { updatePadUI(); }
+        showToast('แก้ไขรายการเรียบร้อย', 'success');
+      })
+      .catch((err) => {
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง: ' + err.message);
+      });
+  }
+
+  // ลบรายการประวัติ (ใช้กรณีลงข้อมูลซ้ำซ้อน) พร้อมย้อนผลกระทบต่อสต๊อก
+  async function deleteStockEditRecord(){
+    if(!canManageStockHistory()) return;
+    const type = document.getElementById('stockEditType').value;
+    const idx = parseInt(document.getElementById('stockEditIndex').value);
+    const list = type === 'diaper' ? diaperHistory : padHistory;
+    const stocks = type === 'diaper' ? diaperStocks : padStocks;
+    const ref = type === 'diaper' ? diaperRef : padRef;
+    const rec = list[idx];
+    if(!rec) return;
+
+    const ok = await showConfirm('ต้องการลบรายการนี้ใช่หรือไม่? สต๊อกจะถูกปรับย้อนกลับให้อัตโนมัติ', 'ยืนยันการลบ');
+    if(!ok) return;
+
+    const updatedStocks = Object.assign({}, stocks);
+    updatedStocks[rec.size] = (updatedStocks[rec.size] || 0) - stockContribution(rec);
+
+    const newList = list.slice();
+    newList.splice(idx, 1);
+
+    if(type === 'diaper'){ diaperStocks = updatedStocks; diaperHistory = newList; } else { padStocks = updatedStocks; padHistory = newList; }
+
+    ref.set({ stocks: updatedStocks, history: newList })
+      .then(() => {
+        closeStockEditModal();
+        if(type === 'diaper'){ updateDiaperUI(); } else { updatePadUI(); }
+        showToast('ลบรายการเรียบร้อย', 'success');
+      })
+      .catch((err) => {
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง: ' + err.message);
+      });
+  }
+
+  document.getElementById('stockEditCancelBtn').addEventListener('click', closeStockEditModal);
+  document.getElementById('stockEditSaveBtn').addEventListener('click', saveStockEditRecord);
+  document.getElementById('stockEditDeleteBtn').addEventListener('click', deleteStockEditRecord);
+
   // ฟังก์ชันดึงข้อมูล CG และผู้สูงอายุจาก Firebase มาใส่ใน Dropdown
   // (ใช้ข้อมูลชุดเดียวกัน เติมให้ทั้งฟอร์มผ้าอ้อม และฟอร์มแผ่นรองซับ)
   function loadDropdownDataFromFirebase() {
