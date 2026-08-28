@@ -352,15 +352,26 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 .pdfpage .pt-cell img{width:100%;object-fit:cover;border-radius:4px;border:1px solid #ddd;}
 .pdfpage .pt-cell .d{font-size:12px;color:#333;margin-top:4px;}
 .pdfpage .pt-footer{position:absolute;bottom:20px;left:30px;right:30px;text-align:center;font-size:11px;color:#555;border-top:1px solid #ddd;padding-top:8px;}
-.pdfpage .sm-info{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;color:#222;}
+.pdfpage .sm-info{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;color:#222;}
 .pdfpage .sm-info td{padding:3px 6px;border:1px solid #ddd;vertical-align:top;}
 .pdfpage .sm-info td.k{background:#faf3f7;font-weight:600;white-space:nowrap;width:110px;}
-.pdfpage .sm-count{margin-top:10px;font-size:12.5px;font-weight:600;color:#111;}
+.pdfpage .sm-count{margin-top:8px;font-size:12.5px;font-weight:600;color:#111;}
 .pdfpage .sm-table{width:100%;border-collapse:collapse;margin-top:8px;table-layout:fixed;}
 .pdfpage .sm-table th{background:var(--primary-light);color:#7a2c52;font-size:10.5px;font-weight:700;padding:5px 6px;border:1px solid #e3c3d5;text-align:left;}
 .pdfpage .sm-table td{font-size:10px;line-height:1.45;padding:5px 6px;border:1px solid #e3c3d5;vertical-align:top;word-break:break-word;}
 .pdfpage .sm-table td.sm-date{font-weight:700;white-space:nowrap;width:52px;}
-.pdfpage .sm-empty{margin-top:30px;text-align:center;color:#999;font-size:13px;}
+.pdfpage .sm-empty{margin-top:10px;text-align:center;color:#999;font-size:13px;}
+/* combined multi-person page: content area is measured for auto page-packing */
+.pdfpage .pb-content{box-sizing:border-box;overflow:hidden;}
+.pdfpage .person-block{}
+.pdfpage .person-block + .person-block{border-top:1px dashed #ddd;margin-top:12px;padding-top:10px;}
+.pdfpage .pb-name{font-size:13.5px;font-weight:700;color:#111;}
+.pdfpage .pb-name .pb-meta{font-size:11px;font-weight:400;color:#555;}
+/* small photo thumbnails placed after the visit-summary paragraph/table */
+.pdfpage .pt-grid-sm{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.pdfpage .pt-cell-sm{width:72px;text-align:center;flex:0 0 auto;}
+.pdfpage .pt-cell-sm img{width:72px;height:56px;object-fit:cover;border-radius:4px;border:1px solid #ddd;display:block;}
+.pdfpage .pt-cell-sm .d{font-size:8.5px;color:#333;margin-top:2px;}
 
 /* ===================== AUTH SCREEN ===================== */
 .auth-overlay{
@@ -984,13 +995,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
   <div class="tab-panel" id="tab-pdf">
     <div class="card">
       <h2>📄 สร้างไฟล์ PDF สรุปการเยี่ยม</h2>
-      <div class="field">
-        <label>รูปแบบรายงาน</label>
-        <div class="checkbox-group" style="flex-direction:row;flex-wrap:wrap;gap:16px;">
-          <label class="checkbox-item"><input type="radio" name="pdfReportType" id="pdfTypeSummary" value="summary" checked> สรุปผลการเยี่ยม (ตาราง 1 คน/แผ่น)</label>
-          <label class="checkbox-item"><input type="radio" name="pdfReportType" id="pdfTypePhoto" value="photo"> อัลบั้มภาพกิจกรรม</label>
-        </div>
-      </div>
+      <p style="font-size:0.82rem;color:var(--muted);margin:-4px 0 12px;">รายงานสรุปผลการเยี่ยมพร้อมภาพประกอบ (ย่อขนาดให้พอดีกับย่อหน้าสรุป) อยู่ในหน้าเดียวกัน ข้อมูลการเยี่ยมจะอยู่ด้านหน้า ภาพอยู่ด้านหลัง และระบบจะจัดหลายคนต่อกระดาษ 1 แผ่นให้อัตโนมัติหากพื้นที่เหลือพอ</p>
       <div class="row">
         <div class="field">
           <label>เดือน</label>
@@ -3696,12 +3701,20 @@ function renderDischargeReport(){
   }).join('');
 }
 
+// ขนาดหน้ากระดาษเสมือน (px) แทน A4 พอร์เทรต (210x297mm) -- 700px กว้าง = 210mm
+const PDF_PAGE_W = 700;
+const PDF_PAGE_H = 990;
+const PDF_PAGE_PAD_V = 34; // padding บน-ล่างของ .pdfpage
+// พื้นที่สำรองสำหรับหัวกระดาษ (ชื่อรายงาน+เดือน) และท้ายกระดาษ (เผื่อไว้ค่อนข้างมากเพื่อกันเนื้อหาล้นหน้า)
+const PDF_HEADER_RESERVE = 62;
+const PDF_FOOTER_RESERVE = 48;
+const PDF_CONTENT_HEIGHT = PDF_PAGE_H - (PDF_PAGE_PAD_V * 2) - PDF_HEADER_RESERVE - PDF_FOOTER_RESERVE;
+
 async function generatePdf(){
   const be = parseInt(document.getElementById('pdfYear').value, 10);
   const month = parseInt(document.getElementById('pdfMonth').value, 10);
   const gy = ceYear(be);
   const cgFilter = document.getElementById('pdfCgFilter').value;
-  const reportType = (document.querySelector('input[name=pdfReportType]:checked')||{}).value || 'summary';
   const progressText = document.getElementById('pdfProgressText');
   const btn = document.getElementById('generatePdfBtn');
 
@@ -3731,46 +3744,99 @@ async function generatePdf(){
     return (ea?ea.name:a).localeCompare(eb?eb.name:b, 'th');
   });
 
-  // build page list
-  const pages = [];
-  if(reportType === 'summary'){
-    // visit-summary report: exactly 1 page per elderly person, regardless of visit count
-    elderlyIdsSorted.forEach(eid=>{
-      const e = STATE.elderly[eid] || { name: eid };
-      pages.push({ elderly: e, visits: byElderly[eid] });
-    });
-  } else {
-    elderlyIdsSorted.forEach(eid=>{
-      const e = STATE.elderly[eid] || { name: eid, pdfMode:'normal' };
-      const list = byElderly[eid];
-      const chunkSize = e.pdfMode === 'obt' ? 12 : 4;
-      const chunks = chunkArray(list, chunkSize);
-      chunks.forEach(chunk=> pages.push({ elderly: e, photos: chunk, allDays: list.map(v=> new Date(v.visitDate).getDate()) }));
-    });
-  }
-
   btn.disabled = true;
   const renderRoot = document.getElementById('pdfRender');
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+  let pageCount = 0;
+
+  // สร้าง "หน้ากระดาษ" ใหม่ พร้อมหัวกระดาษ/พื้นที่เนื้อหา/ท้ายกระดาษ แล้วแนบเข้า DOM (ซ่อนอยู่นอกจอ) ทันที
+  // เพื่อให้วัดความสูงจริงของเนื้อหาได้ถูกต้องขณะทยอยใส่ข้อมูลแต่ละคน
+  function startNewPage(){
+    const monthLabel = THAI_MONTHS[month];
+    const wrap = document.createElement('div');
+    wrap.className = 'pdfpage';
+
+    const head = document.createElement('div');
+    head.innerHTML = `
+      <div class="pt-title">สรุปผลการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+      <div class="pt-sub">ประจำเดือน ${monthLabel} ${be}</div>
+    `;
+    wrap.appendChild(head);
+
+    const content = document.createElement('div');
+    content.className = 'pb-content';
+    content.style.height = PDF_CONTENT_HEIGHT + 'px';
+    wrap.appendChild(content);
+
+    const footer = document.createElement('div');
+    footer.className = 'pt-footer';
+    footer.textContent = 'รพ.สต.บ้านนายอ';
+    wrap.appendChild(footer);
+
+    renderRoot.innerHTML = '';
+    renderRoot.appendChild(wrap);
+    return { wrap, content };
+  }
+
+  async function waitForImages(el){
+    const imgs = Array.from(el.querySelectorAll('img'));
+    await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res=>{
+      img.onload = res; img.onerror = res; setTimeout(res, 4000);
+    })));
+  }
+
+  async function capturePage(shell){
+    await waitForImages(shell.wrap);
+    const canvas = await html2canvas(shell.wrap, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    if(pageCount > 0) doc.addPage();
+    doc.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+    pageCount++;
+  }
 
   try{
-    for(let i=0;i<pages.length;i++){
-      progressText.textContent = `กำลังสร้างหน้า ${i+1}/${pages.length}`;
-      const page = pages[i];
-      const pageEl = reportType === 'summary'
-        ? buildSummaryPageElement(page, month, be)
-        : buildPdfPageElement(page, month, be);
-      renderRoot.innerHTML = '';
-      renderRoot.appendChild(pageEl);
-      await new Promise(r=>setTimeout(r, 320)); // allow images to load
-      const canvas = await html2canvas(pageEl, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      if(i > 0) doc.addPage();
-      doc.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+    let currentShell = startNewPage();
+
+    for(let i=0;i<elderlyIdsSorted.length;i++){
+      progressText.textContent = `กำลังจัดข้อมูล ${i+1}/${elderlyIdsSorted.length} คน`;
+      const eid = elderlyIdsSorted[i];
+      const e = STATE.elderly[eid] || { name: eid };
+      const blockEl = buildElderlyBlockElement(e, byElderly[eid], month, be);
+
+      currentShell.content.appendChild(blockEl);
+      const overflowing = currentShell.content.scrollHeight > currentShell.content.clientHeight;
+
+      if(overflowing){
+        currentShell.content.removeChild(blockEl);
+
+        if(currentShell.content.childElementCount === 0){
+          // แม้แต่คนเดียวก็ยังล้นหน้าเปล่า (ข้อมูล/ภาพเยอะผิดปกติ) -> ปล่อยให้แสดงครบ ไม่ตัดข้อมูลทิ้ง
+          currentShell.content.style.height = 'auto';
+          currentShell.content.style.overflow = 'visible';
+          currentShell.content.appendChild(blockEl);
+          progressText.textContent = `กำลังสร้างหน้า ${pageCount+1}`;
+          await capturePage(currentShell);
+          currentShell = startNewPage();
+        } else {
+          progressText.textContent = `กำลังสร้างหน้า ${pageCount+1}`;
+          await capturePage(currentShell);
+          currentShell = startNewPage();
+          currentShell.content.appendChild(blockEl);
+          if(currentShell.content.scrollHeight > currentShell.content.clientHeight){
+            currentShell.content.style.height = 'auto';
+            currentShell.content.style.overflow = 'visible';
+          }
+        }
+      }
     }
-    const prefix = reportType === 'summary' ? 'สรุปการเยี่ยม' : 'ภาพกิจกรรมเยี่ยม';
-    const filename = `${prefix}_${THAI_MONTHS[month]}${be}.pdf`;
+
+    if(currentShell.content.childElementCount > 0){
+      progressText.textContent = `กำลังสร้างหน้า ${pageCount+1}`;
+      await capturePage(currentShell);
+    }
+
+    const filename = `สรุปการเยี่ยม_${THAI_MONTHS[month]}${be}.pdf`;
     doc.setProperties({ title: filename });
     openPdfPreview(doc, filename);
     showToast('สร้างไฟล์ PDF เรียบร้อย','success');
@@ -3807,23 +3873,22 @@ document.getElementById('pdfPreviewModal').addEventListener('click', (e)=>{
   if(e.target.id === 'pdfPreviewModal') closePdfPreview();
 });
 
-function buildSummaryPageElement(page, month, be){
-  const e = page.elderly || {};
-  const visits = (page.visits || []).slice().sort((a,b)=> new Date(a.visitDate) - new Date(b.visitDate));
+// สร้าง "บล็อกข้อมูล 1 คน" ซึ่งประกอบด้วย สรุปผลการเยี่ยม (ตาราง) อยู่ด้านหน้า
+// และภาพประกอบขนาดย่อ (thumbnail) อยู่ด้านหลัง ในบล็อกเดียวกัน
+// บล็อกนี้จะถูกนำไปประกอบเป็นหน้ากระดาษโดยฟังก์ชัน generatePdf ซึ่งจะจัดหลายคนต่อ 1 แผ่น
+// โดยอัตโนมัติหากพื้นที่กระดาษเหลือพอ
+function buildElderlyBlockElement(e, visitsList, month, be){
+  const visits = (visitsList || []).slice().sort((a,b)=> new Date(a.visitDate) - new Date(b.visitDate));
   const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : (e.cgCode || '-');
-  const monthLabel = THAI_MONTHS[month];
-  const wrap = document.createElement('div');
-  wrap.className = 'pdfpage';
-
   const adlGroupLabel = e.adlGroup ? `กลุ่ม ${e.adlGroup}` : '-';
-  wrap.innerHTML = `
-    <div class="pt-title">สรุปผลการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
-    <div class="pt-sub">ประจำเดือน ${monthLabel} ${be}</div>
+
+  const block = document.createElement('div');
+  block.className = 'person-block';
+
+  block.innerHTML = `
+    <div class="pb-name">${escapeHtml(e.name||'-')} <span class="pb-meta">(HN ${escapeHtml(e.hn||'-')} | อายุ ${e.age||'-'} ปี | ${adlGroupLabel} | CG: ${escapeHtml(cgName)})</span></div>
     <table class="sm-info">
-      <tr><td class="k">ชื่อ-สกุล</td><td>${escapeHtml(e.name||'-')}</td><td class="k">อายุ</td><td>${e.age||'-'} ปี</td></tr>
-      <tr><td class="k">HN</td><td>${escapeHtml(e.hn||'-')}</td><td class="k">เลขบัตรประชาชน</td><td>${escapeHtml(e.idCard||'-')}</td></tr>
-      <tr><td class="k">ที่อยู่</td><td>บ้านเลขที่ ${escapeHtml(e.houseNo||'-')} หมู่ ${escapeHtml(e.moo||'-')}</td><td class="k">กลุ่ม/คะแนน ADL</td><td>${adlGroupLabel} (${e.adlScore ?? '-'} คะแนน)</td></tr>
-      <tr><td class="k">ผู้ดูแล (CG)</td><td colspan="3">${escapeHtml(cgName)}</td></tr>
+      <tr><td class="k">เลขบัตรประชาชน</td><td>${escapeHtml(e.idCard||'-')}</td><td class="k">ที่อยู่</td><td>บ้านเลขที่ ${escapeHtml(e.houseNo||'-')} หมู่ ${escapeHtml(e.moo||'-')}</td></tr>
     </table>
     <div class="sm-count">จำนวนครั้งที่เยี่ยมในเดือนนี้: ${visits.length} ครั้ง</div>
   `;
@@ -3832,7 +3897,7 @@ function buildSummaryPageElement(page, month, be){
     const empty = document.createElement('div');
     empty.className = 'sm-empty';
     empty.textContent = 'ไม่มีข้อมูลการเยี่ยมในเดือนนี้';
-    wrap.appendChild(empty);
+    block.appendChild(empty);
   } else {
     const table = document.createElement('table');
     table.className = 'sm-table';
@@ -3867,67 +3932,25 @@ function buildSummaryPageElement(page, month, be){
       <thead><tr><th>วันที่</th><th>สัญญาณชีพ</th><th>การประเมิน/ดูแล</th><th>กิจกรรม/หมายเหตุ</th></tr></thead>
       <tbody>${rows}</tbody>
     `;
-    wrap.appendChild(table);
+    block.appendChild(table);
   }
 
-  const footer = document.createElement('div');
-  footer.className = 'pt-footer';
-  footer.textContent = `CG: ${cgName} | รพ.สต.บ้านนายอ`;
-  wrap.appendChild(footer);
-  return wrap;
-}
-
-function buildPdfPageElement(page, month, be){
-  const e = page.elderly;
-  const cgName = STATE.cgs[e.cgCode] ? STATE.cgs[e.cgCode].name : (e.cgCode || '-');
-  const wrap = document.createElement('div');
-  wrap.className = 'pdfpage';
-
-  const monthLabel = THAI_MONTHS[month];
-  if(e.pdfMode === 'obt'){
-    const daysSorted = Array.from(new Set(page.allDays)).sort((a,b)=>a-b);
-    wrap.innerHTML = `
-      <div class="pt-title">ภาพดูแลผู้สูงอายุที่มีภาวะพึ่งพิง</div>
-      <div class="pt-sub">ประจำเดือน ${monthLabel} ${be}</div>
-      <div class="pt-name">ชื่อ ${escapeHtml(e.name)} อายุ ${e.age||'-'} ปี วันที่ ${daysSorted.join(',')} ${monthLabel} ${be}</div>
-    `;
-    const count = page.photos.length;
-    const cols = count <= 10 ? 5 : 4;
+  // ภาพประกอบ (ย่อขนาดเล็ก) อยู่ด้านหลังสรุปผลการเยี่ยม
+  const photoVisits = visits.filter(v => v.photoUrl);
+  if(photoVisits.length > 0){
     const grid = document.createElement('div');
-    grid.className = 'pt-grid';
-    grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
-    page.photos.forEach(v=>{
+    grid.className = 'pt-grid-sm';
+    photoVisits.forEach(v=>{
       const cell = document.createElement('div');
-      cell.className = 'pt-cell';
+      cell.className = 'pt-cell-sm';
       const shortD = formatThaiDateVeryShort(v.visitDate);
       cell.innerHTML = `<img src="${v.photoUrl}" crossorigin="anonymous"><div class="d">${shortD}</div>`;
       grid.appendChild(cell);
     });
-    wrap.appendChild(grid);
-  } else {
-    wrap.innerHTML = `
-      <div class="pt-title">ภาพกิจกรรมเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
-      <div class="pt-sub">ประจำเดือน ${monthLabel} ${be}</div>
-      <div class="pt-name">${escapeHtml(e.name)}</div>
-    `;
-    const grid = document.createElement('div');
-    grid.className = 'pt-grid';
-    grid.style.gridTemplateColumns = 'repeat(2,1fr)';
-    page.photos.forEach(v=>{
-      const cell = document.createElement('div');
-      cell.className = 'pt-cell';
-      const d = formatThaiDateShort(v.visitDate);
-      cell.innerHTML = `<img src="${v.photoUrl}" crossorigin="anonymous"><div class="d">${d}</div>`;
-      grid.appendChild(cell);
-    });
-    wrap.appendChild(grid);
+    block.appendChild(grid);
   }
 
-  const footer = document.createElement('div');
-  footer.className = 'pt-footer';
-  footer.textContent = `CG: ${cgName} | รพ.สต.บ้านนายอ`;
-  wrap.appendChild(footer);
-  return wrap;
+  return block;
 }
 
 function formatThaiDateVeryShort(isoDate){
