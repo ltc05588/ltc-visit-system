@@ -876,7 +876,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div class="card">
       <div class="section-actions">
         <h2 style="margin:0;">👥 จัดการ CG (ผู้ดูแล)</h2>
-        <button class="btn btn-primary" id="addCgBtn">+ เพิ่ม CG</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-outline" id="exportCgBtn">⬇ ดาวน์โหลด Excel</button>
+          <button class="btn btn-primary" id="addCgBtn">+ เพิ่ม CG</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table id="cgTable"><thead><tr>
@@ -2897,8 +2900,55 @@ function renderCgTable(){
   tbody.querySelectorAll('[data-view-cg]').forEach(el=>el.addEventListener('click', ()=>openCgDetailModal(el.dataset.viewCg)));
 }
 
+function exportCgToExcel(){
+  const cgIds = Object.keys(STATE.cgs || {}).sort();
+  if(cgIds.length === 0){
+    showToast('ไม่พบข้อมูล CG สำหรับส่งออก','error');
+    return;
+  }
+
+  const header = [
+    'รหัส','ชื่อ','เลขบัตรประชาชน','เบอร์โทร','บ้านเลขที่','หมู่ที่',
+    'ชั่วโมงอบรม','วันอบรมล่าสุด','วันอบรมครั้งต่อไป','ผู้สูงอายุในดูแล','สถานะ'
+  ];
+
+  const rows = cgIds.map(id=>{
+    const cg = STATE.cgs[id];
+    const elderlyCount = getActiveElderlyIds().filter(eid=>STATE.elderly[eid].cgCode===id).length;
+    return [
+      id,
+      cg.name || '',
+      cg.idCard || '',
+      cg.phone || '',
+      cg.houseNo || '',
+      cg.moo || '',
+      (cg.trainingHours !== undefined && cg.trainingHours !== null && cg.trainingHours !== '') ? cg.trainingHours : '',
+      cg.lastTraining || '',
+      cg.nextTraining || '',
+      elderlyCount,
+      cg.status === 'active' ? 'ใช้งาน' : (cg.status || '-')
+    ];
+  });
+
+  const wsData = [header, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [
+    {wch:8},{wch:24},{wch:16},{wch:12},{wch:10},{wch:8},
+    {wch:10},{wch:14},{wch:14},{wch:14},{wch:10}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'CG');
+
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `ข้อมูล CG_${dateStr}.xlsx`);
+  showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อย','success');
+}
+
 function bindCgTabEvents(){
   document.getElementById('addCgBtn').addEventListener('click', ()=>openCgModal(null));
+  document.getElementById('exportCgBtn').addEventListener('click', exportCgToExcel);
   document.getElementById('cgCancelBtn').addEventListener('click', ()=>document.getElementById('cgModal').classList.remove('show'));
   document.getElementById('cgSaveBtn').addEventListener('click', saveCg);
   document.getElementById('cgPhotoInput').addEventListener('change', async (ev)=>{
